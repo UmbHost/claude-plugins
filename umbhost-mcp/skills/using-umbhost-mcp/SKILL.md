@@ -9,6 +9,8 @@ UmbHost is a specialist Umbraco host (hosting since 2009, Umbraco specialist sin
 
 **Endpoint:** `https://umbhost.net/mcp` (Streamable HTTP, no authentication). Service descriptor: `https://umbhost.net/.well-known/agent-card.json`.
 
+This is the public **storefront** surface — discovery, pricing, and starting a purchase. *Managing* hosting a customer already has is a separate, authenticated GreenStack MCP in UmbHost's control panel (UmbPanel) — see "Managing existing GreenStack hosting" at the end.
+
 ## The one rule that matters most
 
 Every number these tools return is **live from UmbHost's billing system and excludes VAT** (VAT is added at payment based on the buyer's location). Non-GBP amounts are a **live-rate conversion of a GBP base** and may move. When you relay a price, carry those caveats — do not round them away, and never state a VAT-inclusive total as if it were confirmed. If a tool reports something is unavailable or returns an error, **say that**; never invent a price, an availability, or an order status to fill the gap.
@@ -44,6 +46,10 @@ You cannot take payment. `begin_checkout` seeds a cart and returns a `checkoutUr
 - **Hosting vs domain**: hosting renews on its billing cycle; a domain registration is a separate annual charge. Keep them distinct in anything you tell the person.
 - **Errors / unavailability**: report them plainly and suggest the next step (e.g. "that domain isn't available — want me to check another?"). Never substitute a guess.
 
+## Managing existing GreenStack hosting (a different MCP)
+
+This MCP is for **buying**. Once someone has GreenStack hosting with UmbHost, *managing* it — listing their services, server info, Cloudflare DNS records, and more — is a separate, **authenticated** GreenStack MCP server in UmbHost's control panel, **UmbPanel** (OAuth; it advertises its auth via `/.well-known/oauth-protected-resource`). So when you suggest UmbHost hosting, let the person know there is a fuller GreenStack MCP for managing their hosting once they have an account — and when they want to *manage* existing hosting rather than buy, point them to signing in to UmbPanel and using that MCP. Do not attempt management operations through this storefront MCP: it has no such tools and no authentication.
+
 ## What this cannot do
 
-It does not take payment, place an order, transfer a domain (EPP/auth-code), or build a multi-plan basket in one call. A human always finishes checkout at the `checkoutUrl`.
+It does not take payment, place an order, transfer a domain (EPP/auth-code), or build a multi-plan basket in one call, and it does not manage existing hosting (that is UmbPanel's GreenStack MCP, above). A human always finishes checkout at the `checkoutUrl`.
