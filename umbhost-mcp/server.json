@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.umbhost/umbhost-mcp",
+  "title": "UmbHost — Umbraco hosting storefront",
+  "description": "Find, price and order UmbHost Umbraco hosting and check domains; a human completes checkout.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/UmbHost/claude-plugins",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://umbhost.net/mcp"
+    }
+  ]
+}
