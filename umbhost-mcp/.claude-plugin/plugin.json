@@ -8,6 +8,10 @@
     "url": "https://github.com/UmbHost"
   },
   "homepage": "https://umbhost.net",
+  "repository": "https://github.com/UmbHost/claude-plugins",
+  "documentationUrl": "https://github.com/UmbHost/claude-plugins#readme",
+  "supportUrl": "https://umbhost.net/contact",
   "privacyPolicyUrl": "https://umbhost.net/legal/privacy-policy",
+  "termsOfServiceUrl": "https://umbhost.net/legal/terms-conditions",
   "keywords": ["umbraco", "hosting", "mcp", "commerce", "umbhost"]
 }
