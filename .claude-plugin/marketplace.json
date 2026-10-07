@@ -1,0 +1,9 @@
+{
+  "name": "umbhost",
+  "description": "UmbHost Claude Code plugins — tooling for GreenStack hosting and UmbPanel.",
+  "owner": {
+    "name": "UmbHost",
+    "url": "https://github.com/UmbHost"
+  },
+  "plugins": []
+}
