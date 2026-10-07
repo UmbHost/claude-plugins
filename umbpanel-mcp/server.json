@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.umbhost/umbpanel-mcp",
+  "name": "net.umbhost/umbpanel-mcp",
   "title": "UmbPanel — UmbHost GreenStack management",
   "description": "Manage your UmbHost GreenStack hosting: services, DNS, registries and deploys, as the member.",
   "version": "0.1.0",
