@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "umbpanel": {
+      "type": "http",
+      "url": "https://www.umbpanel.io/mcp",
+      "oauth": {
+        "clientId": "umbraco-member",
+        "callbackPort": 53135,
+        "authServerMetadataUrl": "https://www.umbpanel.io/.well-known/openid-configuration"
+      }
+    }
+  }
+}
