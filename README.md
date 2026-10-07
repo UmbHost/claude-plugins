@@ -29,4 +29,17 @@ never takes payment.
 claude plugin install umbhost-mcp@umbhost
 ```
 
+### `greenstack-umbraco`
+
+Configure, deploy and troubleshoot an Umbraco 13 or 17 site on [GreenStack](https://kb.umbhost.net/greenstack)
+— single-instance or load-balanced, across any Git provider and any Docker registry Portainer
+supports. Bundles the `greenstack-umbraco-setup` skill (which owns the GreenStack platform contract,
+the v13/v17 and single/load-balanced deltas, and the SignalR backplane for multi-replica backoffice)
+and a connection to the UmbPanel MCP server, so Claude can act in your portal as you (member OAuth) —
+read your service, set the registry/image, read the deploy webhook, and trigger deploys.
+
+```bash
+claude plugin install greenstack-umbraco@umbhost
+```
+
 <!-- Plugins are added as entries in .claude-plugin/marketplace.json. -->
