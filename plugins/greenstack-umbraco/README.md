@@ -12,10 +12,10 @@ hosting. It bundles:
 
 ## Status
 
-Pre-release (`0.1.0`). The UmbPanel MCP connection is **gated on member OAuth being enabled**
-server-side; until then the skill does all app-side configuration and falls back to guided portal
-steps. The `oauth.callbackPort` and `/mcp` endpoint URL in `.mcp.json` are provisional and confirmed
-at go-live.
+Pre-release (`0.1.0`). The `.mcp.json` endpoint (`https://www.umbpanel.io/mcp`) and
+`oauth.callbackPort` (`53135`) are fixed. The MCP connection **activates once member OAuth is
+enabled on UmbPanel** (rolling out per environment); until then the skill does all app-side
+configuration and falls back to guided portal steps, so the plugin is useful either way.
 
 ## Install
 
