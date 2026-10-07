@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "umbhost": {
+      "type": "http",
+      "url": "https://umbhost.net/mcp"
+    }
+  }
+}
