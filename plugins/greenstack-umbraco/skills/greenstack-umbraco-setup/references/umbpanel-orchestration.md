@@ -1,8 +1,9 @@
 # UmbPanel + CI orchestration
 
-How to drive the UmbPanel side. Prefer the **UmbPanel MCP** (bundled in this plugin as `umbpanel`);
-when a tool or the connection is unavailable, fall back to the manual portal steps — the app-side
-configuration never needs the MCP.
+How to drive the UmbPanel side. Prefer the **UmbPanel MCP** (server `umbpanel`, from the companion
+`umbpanel-mcp@umbhost` plugin — install it alongside this one; its `using-umbpanel-mcp` skill covers
+the tools in full). When the plugin isn't installed, a tool is missing, or the connection is
+unavailable, fall back to the manual portal steps — the app-side configuration never needs the MCP.
 
 ## MCP tools (member-scoped; you act as the logged-in portal member)
 

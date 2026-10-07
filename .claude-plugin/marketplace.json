@@ -14,7 +14,12 @@
     {
       "name": "greenstack-umbraco",
       "source": "./plugins/greenstack-umbraco",
-      "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack (single-instance or load-balanced), and connect Claude to UmbPanel over its member-authenticated MCP."
+      "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack (single-instance or load-balanced), across any Git provider and Docker registry. Pairs with umbpanel-mcp."
+    },
+    {
+      "name": "umbpanel-mcp",
+      "source": "./umbpanel-mcp",
+      "description": "Connects Claude to the UmbPanel MCP server to manage a member's own GreenStack hosting — services, Cloudflare DNS, registries and deploys — acting as the signed-in member over OAuth."
     }
   ]
 }

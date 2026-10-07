@@ -1,21 +1,21 @@
 # greenstack-umbraco
 
-A Claude Code plugin for working with [UmbHost GreenStack](https://kb.umbhost.net/greenstack)
-hosting. It bundles:
+The `greenstack-umbraco-setup` skill — configure, deploy and troubleshoot an Umbraco 13 or 17 site
+on [UmbHost GreenStack](https://kb.umbhost.net/greenstack) (single-instance or load-balanced),
+across any Git provider and any Docker registry Portainer supports. The skill owns the GreenStack
+platform contract, the v13/v17 and single/load-balanced deltas, and the SignalR backplane for a
+multi-replica backoffice.
 
-- **The `greenstack-umbraco-setup` skill** — configure, deploy and troubleshoot an Umbraco 13 or
-  17 site on GreenStack (single-instance or load-balanced), across any Git provider and any
-  Docker registry Portainer supports.
-- **A connection to the UmbPanel MCP server** (`.mcp.json`) so Claude can act in your UmbPanel
-  portal as you (member OAuth) — read your service, configure the registry/image, read the deploy
-  webhook, and trigger deploys.
+## Pairs with `umbpanel-mcp`
 
-## Status
+The skill does all app-side work on its own and falls back to guided portal steps. To let Claude
+also carry out the UmbPanel-side steps for you — read your service, set the registry/image, read the
+deploy webhook, trigger deploys — install the companion [`umbpanel-mcp`](../../umbpanel-mcp) plugin,
+which connects to the authenticated UmbPanel MCP as the signed-in member:
 
-Pre-release (`0.1.0`). The `.mcp.json` endpoint (`https://www.umbpanel.io/mcp`) and
-`oauth.callbackPort` (`53135`) are fixed. The MCP connection **activates once member OAuth is
-enabled on UmbPanel** (rolling out per environment); until then the skill does all app-side
-configuration and falls back to guided portal steps, so the plugin is useful either way.
+```
+claude plugin install umbpanel-mcp@umbhost
+```
 
 ## Install
 
@@ -23,3 +23,5 @@ configuration and falls back to guided portal steps, so the plugin is useful eit
 claude plugin marketplace add UmbHost/claude-plugins
 claude plugin install greenstack-umbraco@umbhost
 ```
+
+Pre-release (`0.1.0`).

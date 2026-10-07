@@ -2,7 +2,7 @@
   "name": "greenstack-umbraco",
   "version": "0.1.0",
   "license": "MIT",
-  "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack, and connect Claude to UmbPanel.",
+  "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack (single-instance or load-balanced). Pair with the umbpanel-mcp plugin to drive the UmbPanel side.",
   "author": {
     "name": "UmbHost",
     "url": "https://github.com/UmbHost"

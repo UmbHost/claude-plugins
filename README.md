@@ -31,20 +31,27 @@ claude plugin install umbhost-mcp@umbhost
 
 ### `greenstack-umbraco`
 
-Everything needed to run an Umbraco 13 or 17 site on [GreenStack](https://kb.umbhost.net/greenstack)
-— single-instance or load-balanced, across any Git provider and any Docker registry Portainer
-supports. Bundles two things:
-
-- **The `greenstack-umbraco-setup` skill** — configure, deploy and troubleshoot the site; owns the
-  GreenStack platform contract, the v13/v17 and single/load-balanced deltas, and the SignalR
-  backplane for a multi-replica backoffice.
-- **A connection to the UmbPanel MCP server** ([`https://www.umbpanel.io/mcp`](https://www.umbpanel.io/mcp))
-  — Claude acts in your UmbPanel portal as you (member OAuth): read your service, set the
-  registry/image, read the deploy webhook, and trigger deploys. Falls back to guided portal steps
-  when the MCP isn't connected.
+The `greenstack-umbraco-setup` skill — configure, deploy and troubleshoot an Umbraco 13 or 17 site
+on [GreenStack](https://kb.umbhost.net/greenstack), single-instance or load-balanced, across any Git
+provider and any Docker registry Portainer supports. Owns the GreenStack platform contract, the
+v13/v17 and single/load-balanced deltas, and the SignalR backplane for a multi-replica backoffice.
+Pairs with `umbpanel-mcp` to carry out the UmbPanel-side steps; works standalone otherwise (guided
+portal fallback).
 
 ```bash
 claude plugin install greenstack-umbraco@umbhost
+```
+
+### `umbpanel-mcp`
+
+Connects Claude to the UmbPanel MCP server ([`https://www.umbpanel.io/mcp`](https://www.umbpanel.io/mcp))
+to **manage** a member's existing GreenStack hosting — read their services, set the registry/image,
+read the deploy webhook, trigger deploys, and manage Cloudflare DNS — acting as the signed-in member
+over OAuth. The authenticated counterpart to `umbhost-mcp` (which *buys* hosting); often installed
+alongside `greenstack-umbraco`.
+
+```bash
+claude plugin install umbpanel-mcp@umbhost
 ```
 
 <!-- Plugins are added as entries in .claude-plugin/marketplace.json. -->
