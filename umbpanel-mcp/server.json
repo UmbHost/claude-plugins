@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.umbhost/umbpanel-mcp",
+  "title": "UmbPanel — UmbHost GreenStack management",
+  "description": "Manage your own UmbHost GreenStack hosting — services, Cloudflare DNS, container registry/image and deploys — acting as the signed-in member over OAuth. Authenticated, customer-portal-scoped, confirm-gated on destructive actions.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/UmbHost/claude-plugins",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://www.umbpanel.io/mcp"
+    }
+  ]
+}
