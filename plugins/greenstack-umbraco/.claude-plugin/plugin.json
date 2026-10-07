@@ -1,11 +1,17 @@
 {
   "name": "greenstack-umbraco",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack, and connect Claude to UmbPanel.",
   "author": {
     "name": "UmbHost",
     "url": "https://github.com/UmbHost"
   },
   "homepage": "https://kb.umbhost.net/greenstack",
+  "repository": "https://github.com/UmbHost/claude-plugins",
+  "documentationUrl": "https://github.com/UmbHost/claude-plugins/tree/main/plugins/greenstack-umbraco#readme",
+  "supportUrl": "https://umbhost.net/contact",
+  "privacyPolicyUrl": "https://umbhost.net/legal/privacy-policy",
+  "termsOfServiceUrl": "https://umbhost.net/legal/terms-conditions",
   "keywords": ["umbraco", "greenstack", "umbpanel", "umbhost", "docker-swarm", "hosting"]
 }

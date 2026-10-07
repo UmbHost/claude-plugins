@@ -10,6 +10,11 @@
       "name": "umbhost-mcp",
       "source": "./umbhost-mcp",
       "description": "Connects to the UmbHost MCP server and teaches an agent to find, price, and order UmbHost Umbraco hosting (and check domains), with a human completing checkout."
+    },
+    {
+      "name": "greenstack-umbraco",
+      "source": "./plugins/greenstack-umbraco",
+      "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack (single-instance or load-balanced), and connect Claude to UmbPanel over its member-authenticated MCP."
     }
   ]
 }
