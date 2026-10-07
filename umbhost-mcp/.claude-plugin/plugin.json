@@ -1,11 +1,13 @@
 {
   "name": "umbhost-mcp",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Connects to the UmbHost MCP server and teaches an agent to find, price, and order UmbHost Umbraco hosting (and check domains), with a human completing checkout.",
   "author": {
     "name": "UmbHost",
     "url": "https://github.com/UmbHost"
   },
   "homepage": "https://umbhost.net",
+  "privacyPolicyUrl": "https://umbhost.net/legal/privacy-policy",
   "keywords": ["umbraco", "hosting", "mcp", "commerce", "umbhost"]
 }
