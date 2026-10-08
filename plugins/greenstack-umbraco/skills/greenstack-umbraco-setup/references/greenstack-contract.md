@@ -33,7 +33,10 @@ customer-facing summary.)
 - Don't configure media storage — the shared media mount already serves every replica. (Azure Blob
   is a valid optional choice for very high scale, but out of scope for a standard setup.)
 - Point Data Protection at `/app/keys` only (the `DataProtectionComposer` does this) — don't invent
-  another shared volume or set `SetApplicationName`.
+  another shared volume or set `SetApplicationName`. Apply this on **every deployed environment**, i.e.
+  production **and** staging (both get the `/app/keys` mount) — gate the composer on
+  `IsProduction() || IsStaging()` (every template uses this form), never `IsProduction()` alone, or
+  staging keys land in the immutable image and regenerate on every restart.
 - Don't set `UmbracoApplicationUrl`, `MainDomLock`, or the Examine factory in appsettings.
 - Keep the Lucene index node-local; never on a shared mount.
 

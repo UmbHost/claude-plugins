@@ -10,7 +10,10 @@ apply these to an existing Umbraco 17 project.
 - **HTTPS health-check disabled-check ID:** `EB66BB3B-1BCD-4314-9531-9DA2C1D6D9A7`
   (`Umbraco:CMS:HealthChecks:DisabledChecks`).
 - Forwarded-headers API: **`options.KnownIPNetworks.Clear()`** (not `KnownNetworks`).
-- `DataProtectionComposer` uses `!environment.IsDevelopment()` → `/app/keys`.
+- `DataProtectionComposer` uses `environment.IsProduction() || environment.IsStaging()` → `/app/keys`
+  (identical to the v13 template), so keys persist on **both** the production and staging deployments;
+  local dev falls back to a local folder. Don't narrow this to `IsProduction()` alone — that breaks Data
+  Protection on the staging environment.
 
 ## Program.cs essentials (from the template)
 
