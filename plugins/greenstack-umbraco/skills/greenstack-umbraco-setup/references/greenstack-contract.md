@@ -36,3 +36,57 @@ customer-facing summary.)
   another shared volume or set `SetApplicationName`.
 - Don't set `UmbracoApplicationUrl`, `MainDomLock`, or the Examine factory in appsettings.
 - Keep the Lucene index node-local; never on a shared mount.
+
+## SFTP access & the immutable image
+
+The running container **is the immutable Docker image**. Only the mounted volumes persist — anything
+written anywhere else in the container is **lost on the next restart or redeploy**. You never "fix" a
+site by editing files inside the container; rebuild the image and redeploy.
+
+**SFTP (SFTPGo) reaches only the persistent mounts** — in practice three paths (confirmed by the
+service's Gluster bind mounts):
+
+- `keys` — Data Protection keys (`/app/keys`)
+- `umbraco/Logs` — Umbraco logs
+- `wwwroot/media` — uploaded media
+
+The application itself — DLLs, **views**, `wwwroot` app assets, `App_Plugins` — lives **in the image**,
+not on these mounts, so it is **not visible or editable over SFTP**. Use SFTP to read logs, manage
+media, or inspect keys — not to change the app.
+
+## Debugging the running container (read-only, ephemeral)
+
+The terminal (Portainer console / `exec`) is for **debugging only** — changes don't persist. The base
+image is **minimal** (`mcr.microsoft.com/dotnet/aspnet`): no `curl`/`wget`, no `ps`/`top`/`netstat`, no
+editors. Commands that work on it:
+
+```sh
+# recent logs (also reachable via SFTP)
+tail -n 200 /app/umbraco/Logs/UmbracoTraceLog.*.json
+
+# the environment the app actually sees (verify injected vars)
+printenv | sort
+
+# the app process + its args (there is no `ps`)
+tr '\0' ' ' < /proc/1/cmdline; echo
+
+# confirm the persistent mounts are present & writable
+ls -la /app/keys /app/umbraco/Logs /app/wwwroot/media
+df -h /app/wwwroot/media /app/keys
+
+# HTTP-probe the app from inside the container (no curl — bash /dev/tcp)
+exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 && cat <&3
+
+# confirm a view path exists with the right casing (Linux is case-sensitive)
+ls -la /app/Views/Partials/Forms
+```
+
+If the image is a **chiseled/distroless** variant there is **no shell at all** — debug from the logs
+(SFTP `umbraco/Logs`) instead.
+
+## Getting the uSync folder out
+
+uSync serialises Settings/Dictionary to the `uSync/` folder, which lives **in the image** (not an SFTP
+mount). To retrieve it from a running environment, use the **uSync dashboard in the backoffice** — it
+can **export and download the uSync folder** as a zip. For promotion, commit the uSync files to the
+repo so they deploy with the branch (see `environments-and-promotion.md`).

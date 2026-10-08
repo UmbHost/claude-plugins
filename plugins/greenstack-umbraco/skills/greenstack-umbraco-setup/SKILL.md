@@ -110,6 +110,20 @@ GreenStack customer sites run **one service per environment, each deploying from
 - **Content:** uSync export is fine for the **initial** seed; use **uSync.Complete** for ongoing content promotion between environments.
 - **Forms captcha:** prefer **Cloudflare Turnstile** (GreenStack is already Cloudflare-fronted) over hCaptcha/reCAPTCHA; for Umbraco Forms use **uCaptcha** with its Turnstile provider.
 
+## Files, SFTP & debugging
+
+- The running container is the **immutable image** — only mounted volumes persist; files written anywhere else vanish on redeploy. Never fix a site by editing the container; rebuild + redeploy.
+- **SFTP reaches only** `keys`, `umbraco/Logs`, `wwwroot/media` (the persistent mounts). The app — DLLs, views, `App_Plugins`, `wwwroot` app assets — is **in the image**, not visible/editable over SFTP.
+- **Terminal = read-only debugging** (changes are ephemeral); the base image is minimal (no `curl`/`ps`/editors). Minimal-image command set + detail: `references/greenstack-contract.md`.
+- **uSync folder** isn't on an SFTP mount — **export & download it from the uSync backoffice dashboard**; commit uSync files to the repo for promotion (`references/environments-and-promotion.md`).
+
+## Cache busting (Cloudflare hard-caches static assets)
+
+The CDN **hard-caches all static files and media — including image crops** — so an asset changed at the same URL keeps serving the old version until the URL changes or the cache is purged.
+
+- **Scripts & styles:** use the native .NET **`asp-append-version="true"`** tag helper on `<script>`/`<link>` (appends a content-hash `?v=`), or a **Vite manifest** (hashed filenames) for bundled assets. Without versioned URLs, CSS/JS changes won't reach visitors.
+- **Media & crops:** a replaced image at the same URL, or a changed crop, stays cached — change the URL or **purge the CDN** (UmbPanel CDN purge) to refresh it.
+
 ## Common mistakes (all seen in a cold baseline)
 
 | Mistake | Reality |
@@ -130,3 +144,6 @@ GreenStack customer sites run **one service per environment, each deploying from
 | Umbraco Forms renders blank / 500 in Production | `Views/Partials/Forms` isn't in the publish output — precompilation doesn't carry it; add a `Content`/`CopyToOutputDirectory` item for it |
 | View 404s on the container but works on Windows | Linux is case-sensitive — match path case exactly (`Views/Partials/Forms`, `App_Plugins`, partial names) |
 | A view's package model fails only after enabling Production mode | Precompilation needs the type resolvable at build — `dotnet build -c Release` surfaces it; pin the package to a framework-compatible version |
+| Editing files in the container, or expecting app files over SFTP | Immutable image — changes vanish on redeploy; SFTP exposes only `keys`/`umbraco/Logs`/`wwwroot/media`. Rebuild + redeploy |
+| CSS/JS change not reaching visitors | CDN hard-caches static assets — use `asp-append-version="true"` or a Vite manifest so URLs change |
+| Replaced image or changed crop still shows the old one | CDN hard-caches media + crops — change the URL or purge the CDN |
