@@ -35,8 +35,8 @@ customer-facing summary.)
 - Point Data Protection at `/app/keys` only (the `DataProtectionComposer` does this) — don't invent
   another shared volume or set `SetApplicationName`. Apply this on **every deployed environment**, i.e.
   production **and** staging (both get the `/app/keys` mount) — gate the composer on
-  `!IsDevelopment()` (or `IsProduction() || IsStaging()`), never `IsProduction()` alone, or staging keys
-  land in the immutable image and regenerate on every restart.
+  `IsProduction() || IsStaging()` (every template uses this form), never `IsProduction()` alone, or
+  staging keys land in the immutable image and regenerate on every restart.
 - Don't set `UmbracoApplicationUrl`, `MainDomLock`, or the Examine factory in appsettings.
 - Keep the Lucene index node-local; never on a shared mount.
 
