@@ -46,11 +46,16 @@ Both versions:
 3. **Remove the HTTPS runtime validator** — `DockerChecksRemoverComposer` (`RuntimeModeValidators().Remove<UseHttpsValidator>()`).
 4. **Persist Data Protection keys to `/app/keys`** — `DataProtectionComposer`. The shared mount makes keys consistent across replicas; no custom path or `SetApplicationName` needed.
 5. **Dockerfile** from the samples — non-root `1000`, `EXPOSE 8080`, `--locked-mode` restore (commit `packages.lock.json`). Don't set `ASPNETCORE_URLS`/env; the base image and UmbPanel handle it.
-6. **Production runtime mode + `appsettings.Production.json`** — GreenStack injects `ASPNETCORE_ENVIRONMENT=Production`, so an `appsettings.Production.json` is loaded over `appsettings.json`. Turn on Umbraco's **Production runtime mode** and the rest of the production hardening there. Production mode **requires precompiled views and models**, so you must also:
-   - **Remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj`.** Left in, views aren't precompiled and every template **404s** under Production mode.
-   - Use `ModelsBuilder:ModelsMode = Nothing` (compiled models) — the value is **`Nothing`, not `None`** (`None` fails to bind).
 
-   Minimum file — do **not** add `UmbracoApplicationUrl`, `BackOfficeHost`, `MainDomLock`, the Examine factory, the DSN, or `Global:UseHttps`: the platform injects the first five, and the HTTPS validator is *removed* (item 3), not satisfied here.
+## Production runtime mode (optional — the templates deliberately do NOT ship this)
+
+The stock templates run with **`ModelsBuilder:ModelsMode = InMemoryAuto`** (the default), **no `Runtime:Mode`** (so backoffice-development mode), and therefore keep `RazorCompileOnBuild/Publish = false` in the `.csproj` — the csproj comment says exactly this ("Remove … when not using ModelsMode InMemoryAuto"). That default is intentional and flexible: doc-type and view changes take effect live, no redeploy. **Those `false` flags are correct for the template — not a bug.**
+
+Switch to **Production runtime mode** only if you want the stricter, faster posture. It is an opt-in, and the three pieces must change **together** or the app won't boot:
+
+1. **Move `ModelsBuilder:ModelsMode` off `InMemoryAuto`.** Generate strongly-typed models in a Development-mode environment (`SourceCodeManual`) and **commit the generated `.cs`**, then run production with `ModelsMode = Nothing` (value is **`Nothing`, not `None`**). Production mode rejects `InMemoryAuto`.
+2. **Then remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj`** so views precompile at build. Do this **only after** step 1 — removing them while still on `InMemoryAuto` breaks the build (views reference models that don't exist at compile time). Keep `CopyRazorGenerateFilesToPublishDirectory=true` (already in the template; the backoffice needs the files). The sample Dockerfile already builds `-c Release`.
+3. **Add `appsettings.Production.json`** (loaded because `ASPNETCORE_ENVIRONMENT=Production` is injected). Do **not** add `UmbracoApplicationUrl`, `BackOfficeHost`, `MainDomLock`, the Examine factory, the DSN, or `Global:UseHttps`: the platform injects the first five, and the HTTPS validator is *removed* (step 3 above), not satisfied here.
 
    ```json
    {
@@ -65,7 +70,7 @@ Both versions:
    }
    ```
 
-   Per-version extras (e.g. v13's `Content:MacroErrors`): `references/umbraco-13.md`, `references/umbraco-17.md`.
+Trade-off: with `Nothing`, doc-type/view changes need a rebuild + redeploy (no live editing). Per-version notes: `references/umbraco-13.md` (keeps `Content:MacroErrors`), `references/umbraco-17.md`.
 
 ## Load-balanced vs single-instance
 
@@ -106,6 +111,6 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 | "Run as root" to fix volume writes | Template runs non-root `1000` — keep it |
 | Baking `ASPNETCORE_ENVIRONMENT` / secrets into the image | Injected by UmbPanel per environment |
 | Setting `DisableElectionForSingleServer` on a multi-replica site | Only for single-instance; leave election automatic when load-balanced |
-| Leaving `<RazorCompileOnBuild/Publish>false` in the `.csproj` | Production runtime mode needs precompiled views — every template 404s. Remove both properties |
-| `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind and models aren't disabled |
-| No `appsettings.Production.json` (Debug on, no `Runtime:Mode`) | Add it: `Runtime:Mode=Production`, `Hosting:Debug=false`, `ModelsMode=Nothing`, Serilog `Error` |
+| Removing `RazorCompile*=false` while still on `ModelsMode=InMemoryAuto` | Those flags are *required* for InMemoryAuto — the build fails. Switch ModelsMode first (see Production runtime mode) |
+| `Runtime:Mode=Production` but left on `InMemoryAuto` / `RazorCompile*=false` | Production mode rejects InMemoryAuto and 404s uncompiled views. Change all three together |
+| `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind |

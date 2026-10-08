@@ -76,20 +76,17 @@ Includes the disabled-check above, `RuntimeMinification:UseHttps=false`,
 It does **not** set `UmbracoApplicationUrl`, `MainDomLock`, the Examine factory, or the DSN — those
 are injected (see `greenstack-contract.md`).
 
-## Production runtime mode (`appsettings.Production.json`)
+## Production runtime mode (optional opt-in)
 
-`ASPNETCORE_ENVIRONMENT=Production` is injected, so add an `appsettings.Production.json` that enables
-**Production runtime mode** and the production hardening (see the SKILL for the minimum file and the
-"don't set these" list). Production mode is strict:
+**The v17 template does not ship this.** It uses `ModelsBuilder:ModelsMode = InMemoryAuto`, sets no
+`Runtime:Mode`, references `Umbraco.Cms.DevelopmentMode.Backoffice`, and keeps
+`RazorCompileOnBuild/Publish = false` in the csproj — all correct for live, flexible editing. See
+the SKILL's "Production runtime mode" section for the full opt-in (the three coordinated changes and
+the minimum `appsettings.Production.json`). v17 specifics:
 
-- **Precompiled views are required.** Remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and
-  `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj` (if present) — otherwise
-  templates 404. The Dockerfile already builds with `--configuration Release`; keep it.
-- **`ModelsBuilder:ModelsMode = Nothing`** (compiled models — `Nothing`, not `None`). With `Nothing`,
-  document-type changes are made in a Development-mode environment and the models rebuilt/republished;
-  they are not generated at runtime in Production.
-- `Hosting:Debug = false`, Serilog `MinimumLevel:Default = Error`.
-- Do **not** add `Global:UseHttps` to satisfy the stock Umbraco HTTPS requirement — TLS terminates at
-  the edge and the `UseHttpsValidator` is removed via `DockerChecksRemoverComposer`.
-
-v17 has no macros, so **no `Content:MacroErrors`** entry (that is a v13-only setting).
+- The csproj already sets `CopyRazorGenerateFilesToPublishDirectory=true`; the Dockerfile already
+  builds `-c Release`. Only the `RazorCompileOnBuild/Publish=false` flags change (removed) — and only
+  after `ModelsMode` leaves `InMemoryAuto`.
+- Do **not** add `Global:UseHttps` to satisfy the stock Umbraco Production HTTPS requirement — TLS
+  terminates at the edge and the `UseHttpsValidator` is removed via `DockerChecksRemoverComposer`.
+- v17 has no macros, so **no `Content:MacroErrors`** entry (that is a v13-only setting).
