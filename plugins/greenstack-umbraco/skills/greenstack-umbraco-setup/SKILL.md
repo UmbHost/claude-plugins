@@ -44,7 +44,7 @@ Both versions:
 1. **Forwarded headers** in `Program.cs` — trust `X-Forwarded-For`/`-Proto`, clear KnownProxies, `UseForwardedHeaders()` first. *API differs: v17 `KnownIPNetworks.Clear()`, v13 `KnownNetworks.Clear()`.*
 2. **Disable the HTTPS health check** — `Umbraco:CMS:HealthChecks:DisabledChecks` with the **version-specific ID**: v17 `EB66BB3B-1BCD-4314-9531-9DA2C1D6D9A7`, v13 `E2048C48-21C5-4BE1-A80B-8062162DF124`.
 3. **Remove the HTTPS runtime validator** — `DockerChecksRemoverComposer` (`RuntimeModeValidators().Remove<UseHttpsValidator>()`).
-4. **Persist Data Protection keys to `/app/keys`** — `DataProtectionComposer`. The shared mount makes keys consistent across replicas; no custom path or `SetApplicationName` needed.
+4. **Persist Data Protection keys to `/app/keys`** — `DataProtectionComposer`. The shared mount makes keys consistent across replicas; no custom path or `SetApplicationName` needed. **Gate it on both production and staging** (v17 uses `!environment.IsDevelopment()`; v13 uses `environment.IsProduction() || environment.IsStaging()`), *not* `IsProduction()` alone — staging is a deployed environment with the same `/app/keys` mount, and a Production-only check writes staging keys into the immutable image, where they regenerate on every restart and differ per replica (broken logins/antiforgery/encrypted data).
 5. **Dockerfile** from the samples — non-root `1000`, `EXPOSE 8080`, `--locked-mode` restore (commit `packages.lock.json`). Don't set `ASPNETCORE_URLS`/env; the base image and UmbPanel handle it.
 6. **Production runtime mode + `appsettings.Production.json`** — the templates run in Umbraco **Production runtime mode**. `ASPNETCORE_ENVIRONMENT=Production` is injected, so `appsettings.Production.json` layers over `appsettings.json`. Production mode **requires precompiled views and compiled models**, so the templates:
    - **Omit `<RazorCompileOnBuild>false</RazorCompileOnBuild>` / `<RazorCompileOnPublish>false</RazorCompileOnPublish>`** from the `.csproj` so views precompile (left `false` under Production mode, every template **404s**). Keep `CopyRazorGenerateFilesToPublishDirectory=true`. Only re-add the `false` flags if you switch `ModelsMode` back to `InMemoryAuto` (and drop Production mode) — otherwise the build breaks.
@@ -130,6 +130,7 @@ The CDN **hard-caches all static files and media — including image crops** —
 |---|---|
 | Hand-setting `MainDomLock` / `UmbracoApplicationUrl` / Examine factory | Platform injects them (frozen) — remove from appsettings |
 | Inventing `/shared/dp-keys` or Azure Blob for media | DP keys → `/app/keys`; media is an injected shared mount |
+| DP keys gated on `IsProduction()` only | Staging (`ASPNETCORE_ENVIRONMENT=Staging`) then keys outside `/app/keys` → regenerate per restart/replica, breaking staging logins. Gate on production **and** staging (`!IsDevelopment()`) |
 | Adding a custom `/healthz` endpoint | Health check is path `/` over `*.umbpanel.io` |
 | Forgetting the HTTPS check-disable + validator removal | Backoffice shows "HTTPS is required" |
 | Missing the deploy webhook / first-push-fails flow | No deploy triggers; the webhook URL exists only after the first deploy |

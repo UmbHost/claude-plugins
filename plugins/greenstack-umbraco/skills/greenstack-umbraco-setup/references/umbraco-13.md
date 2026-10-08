@@ -12,7 +12,10 @@ apply these to an existing Umbraco 13 project.
 - Forwarded-headers API: **`options.KnownNetworks.Clear()`** (not `KnownIPNetworks`).
 - `Program.cs` also calls **`.AddDeliveryApi()`** and **`u.UseInstallerEndpoints()`** (not present
   in the v17 template).
-- `DataProtectionComposer` uses `environment.IsProduction()` → `/app/keys`.
+- `DataProtectionComposer` uses `environment.IsProduction() || environment.IsStaging()` → `/app/keys`,
+  so keys persist on **both** the production and staging deployments (local dev falls back to a local
+  folder). Gating on `IsProduction()` alone writes staging keys inside the immutable image, where they
+  regenerate on every restart and differ per replica — breaking logins/antiforgery/encrypted data on staging.
 
 ## Program.cs essentials (from the template)
 
