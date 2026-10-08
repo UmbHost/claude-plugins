@@ -46,11 +46,11 @@ Both versions:
 3. **Remove the HTTPS runtime validator** — `DockerChecksRemoverComposer` (`RuntimeModeValidators().Remove<UseHttpsValidator>()`).
 4. **Persist Data Protection keys to `/app/keys`** — `DataProtectionComposer`. The shared mount makes keys consistent across replicas; no custom path or `SetApplicationName` needed.
 5. **Dockerfile** from the samples — non-root `1000`, `EXPOSE 8080`, `--locked-mode` restore (commit `packages.lock.json`). Don't set `ASPNETCORE_URLS`/env; the base image and UmbPanel handle it.
-6. **Production runtime mode + `appsettings.Production.json`** — GreenStack injects `ASPNETCORE_ENVIRONMENT=Production`, so an `appsettings.Production.json` is loaded over `appsettings.json`. Turn on Umbraco's **Production runtime mode** and the rest of the production hardening there. Production mode **requires precompiled views and models**, so you must also:
-   - **Remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj`.** Left in, views aren't precompiled and every template **404s** under Production mode.
-   - Use `ModelsBuilder:ModelsMode = Nothing` (compiled models) — the value is **`Nothing`, not `None`** (`None` fails to bind).
+6. **Production runtime mode + `appsettings.Production.json`** — the templates run in Umbraco **Production runtime mode**. `ASPNETCORE_ENVIRONMENT=Production` is injected, so `appsettings.Production.json` layers over `appsettings.json`. Production mode **requires precompiled views and compiled models**, so the templates:
+   - **Omit `<RazorCompileOnBuild>false</RazorCompileOnBuild>` / `<RazorCompileOnPublish>false</RazorCompileOnPublish>`** from the `.csproj` so views precompile (left `false` under Production mode, every template **404s**). Keep `CopyRazorGenerateFilesToPublishDirectory=true`. Only re-add the `false` flags if you switch `ModelsMode` back to `InMemoryAuto` (and drop Production mode) — otherwise the build breaks.
+   - Set `ModelsBuilder:ModelsMode = Nothing` (compiled models) — the value is **`Nothing`, not `None`** (`None` fails to bind).
 
-   Minimum file — do **not** add `UmbracoApplicationUrl`, `BackOfficeHost`, `MainDomLock`, the Examine factory, the DSN, or `Global:UseHttps`: the platform injects the first five, and the HTTPS validator is *removed* (item 3), not satisfied here.
+   The file — do **not** add `UmbracoApplicationUrl`, `BackOfficeHost`, `MainDomLock`, the Examine factory, the DSN, or `Global:UseHttps`. The platform **injects** the first five (the injected `UmbracoApplicationUrl` already satisfies the Production-mode validator), and the HTTPS validator is *removed* by `DockerChecksRemoverComposer` (item 3), not satisfied here.
 
    ```json
    {
@@ -65,7 +65,15 @@ Both versions:
    }
    ```
 
-   Per-version extras (e.g. v13's `Content:MacroErrors`): `references/umbraco-13.md`, `references/umbraco-17.md`.
+   **v13 also requires** `RuntimeMinification:CacheBuster = Version` — a v13 Production-mode validator; the site won't boot without a fixed cache buster — and sets `Content:MacroErrors = Inline`. Per-version detail: `references/umbraco-13.md`, `references/umbraco-17.md`.
+
+## Precompiled views — build to catch issues (Production mode)
+
+With the Razor flags removed, views compile **at build**, so problems surface as build errors instead of runtime 404s. Three things bite here:
+
+- **Build the web project before deploying.** `dotnet build -c Release` bubbles up every Razor/view error — a missing or framework-incompatible package model, a bad `@inherits`, a view referencing a type that isn't resolvable at compile time. Fix them at build; don't discover them as 404s in the container. (Example: a kit pinned a design-kit package to a major whose latest build targeted a newer `net` than the project — the views only failed once precompilation was on.)
+- **Umbraco Forms views must reach the output.** Precompilation does not carry the Forms theme views, so **`Views/Partials/Forms` must be copied to the publish output** (e.g. a `Content`/`CopyToOutputDirectory` item in the csproj) — otherwise Forms render blank/500 in Production.
+- **Linux is case-sensitive.** GreenStack containers are Linux: file and folder paths must match case **exactly** (`Views/Partials/Forms`, not `views/partials/forms`; `_ViewImports.cshtml`, partial names, `App_Plugins` asset paths). A casing mismatch builds and runs on Windows but 404s / fails to find the view on the container.
 
 ## Load-balanced vs single-instance
 
@@ -93,6 +101,29 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 - **Webhook chicken-and-egg:** the deploy `WEBHOOK_ENDPOINT` does not exist until **after** the first deploy, so the **first push is expected to fail at the webhook step**. Sequence: push → image builds/pushes → webhook step fails → read the webhook URL from UmbPanel (`docker_get_service` returns it) → store it as a CI secret → re-run.
 - **Verify:** GET `https://{service}.umbpanel.io` until it responds healthy.
 
+## Environments, promotion & recommended add-ons
+
+GreenStack customer sites run **one service per environment, each deploying from its own branch**, and promote through git + uSync. Detail: `references/environments-and-promotion.md`.
+
+- **Branches:** `master` = production, `staging` = staging. Feature → **PR into `staging`** → verify → **PR `staging` → `master`** to release. Each merge deploys that environment.
+- **Settings & Dictionary via uSync** (free), source-controlled so they promote with the branch. **Reclassify Dictionary items as Settings** so they sync with the settings group, not as content.
+- **Content:** uSync export is fine for the **initial** seed; use **uSync.Complete** for ongoing content promotion between environments.
+- **Forms captcha:** prefer **Cloudflare Turnstile** (GreenStack is already Cloudflare-fronted) over hCaptcha/reCAPTCHA; for Umbraco Forms use **uCaptcha** with its Turnstile provider.
+
+## Files, SFTP & debugging
+
+- The running container is the **immutable image** — only mounted volumes persist; files written anywhere else vanish on redeploy. Never fix a site by editing the container; rebuild + redeploy.
+- **SFTP reaches only** `keys`, `umbraco/Logs`, `wwwroot/media` (the persistent mounts). The app — DLLs, views, `App_Plugins`, `wwwroot` app assets — is **in the image**, not visible/editable over SFTP.
+- **Terminal = read-only debugging** (changes are ephemeral); the base image is minimal (no `curl`/`ps`/editors). Minimal-image command set + detail: `references/greenstack-contract.md`.
+- **uSync folder** isn't on an SFTP mount — **export & download it from the uSync backoffice dashboard**; commit uSync files to the repo for promotion (`references/environments-and-promotion.md`).
+
+## Cache busting (Cloudflare hard-caches static assets)
+
+The CDN **hard-caches all static files and media — including image crops** — so an asset changed at the same URL keeps serving the old version until the URL changes or the cache is purged.
+
+- **Scripts & styles:** use the native .NET **`asp-append-version="true"`** tag helper on `<script>`/`<link>` (appends a content-hash `?v=`), or a **Vite manifest** (hashed filenames) for bundled assets. Without versioned URLs, CSS/JS changes won't reach visitors.
+- **Media & crops:** a replaced image at the same URL, or a changed crop, stays cached — change the URL or **purge the CDN** (UmbPanel CDN purge) to refresh it.
+
 ## Common mistakes (all seen in a cold baseline)
 
 | Mistake | Reality |
@@ -106,6 +137,13 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 | "Run as root" to fix volume writes | Template runs non-root `1000` — keep it |
 | Baking `ASPNETCORE_ENVIRONMENT` / secrets into the image | Injected by UmbPanel per environment |
 | Setting `DisableElectionForSingleServer` on a multi-replica site | Only for single-instance; leave election automatic when load-balanced |
-| Leaving `<RazorCompileOnBuild/Publish>false` in the `.csproj` | Production runtime mode needs precompiled views — every template 404s. Remove both properties |
+| Re-adding `<RazorCompileOnBuild/Publish>false` under Production mode | Views then aren't precompiled — every template 404s. Only valid alongside `ModelsMode=InMemoryAuto` (non-Production) |
 | `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind and models aren't disabled |
-| No `appsettings.Production.json` (Debug on, no `Runtime:Mode`) | Add it: `Runtime:Mode=Production`, `Hosting:Debug=false`, `ModelsMode=Nothing`, Serilog `Error` |
+| v13 Production mode with no fixed cache buster | v13's `RuntimeMinificationValidator` fails boot — set `RuntimeMinification:CacheBuster=Version` (not `Timestamp`) |
+| Adding `Global:UseHttps=true` for Production mode | Not needed — edge TLS; `UseHttpsValidator` is removed by `DockerChecksRemoverComposer`, and `UmbracoApplicationUrl` is injected |
+| Umbraco Forms renders blank / 500 in Production | `Views/Partials/Forms` isn't in the publish output — precompilation doesn't carry it; add a `Content`/`CopyToOutputDirectory` item for it |
+| View 404s on the container but works on Windows | Linux is case-sensitive — match path case exactly (`Views/Partials/Forms`, `App_Plugins`, partial names) |
+| A view's package model fails only after enabling Production mode | Precompilation needs the type resolvable at build — `dotnet build -c Release` surfaces it; pin the package to a framework-compatible version |
+| Editing files in the container, or expecting app files over SFTP | Immutable image — changes vanish on redeploy; SFTP exposes only `keys`/`umbraco/Logs`/`wwwroot/media`. Rebuild + redeploy |
+| CSS/JS change not reaching visitors | CDN hard-caches static assets — use `asp-append-version="true"` or a Vite manifest so URLs change |
+| Replaced image or changed crop still shows the old one | CDN hard-caches media + crops — change the URL or purge the CDN |

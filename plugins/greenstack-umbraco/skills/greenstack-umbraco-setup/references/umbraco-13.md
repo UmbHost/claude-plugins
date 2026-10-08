@@ -45,17 +45,20 @@ the Examine factory, or the DSN — those are injected (see `greenstack-contract
 
 ## Production runtime mode (`appsettings.Production.json`)
 
-`ASPNETCORE_ENVIRONMENT=Production` is injected, so add an `appsettings.Production.json` that enables
-**Production runtime mode** and the production hardening (see the SKILL for the minimum file and the
-"don't set these" list). Production mode is strict:
+The template runs in **Production runtime mode**: `ASPNETCORE_ENVIRONMENT=Production` is injected, so
+`appsettings.Production.json` layers over `appsettings.json` (see the SKILL for the minimum file and
+the "don't set these" list). Production mode is strict:
 
-- **Precompiled views are required.** Remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and
-  `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj` (if present) — otherwise
-  templates 404. The Dockerfile already builds with `--configuration Release`; keep it.
+- **Precompiled views are required.** The csproj **omits** `<RazorCompileOnBuild>false</RazorCompileOnBuild>`
+  and `<RazorCompileOnPublish>false</RazorCompileOnPublish>` so views precompile — otherwise templates
+  404. The Dockerfile already builds `--configuration Release`; keep it.
 - **`ModelsBuilder:ModelsMode = Nothing`** (compiled models — `Nothing`, not `None`). Document-type
   changes are made in a Development-mode environment and the models rebuilt/republished; they are not
   generated at runtime in Production.
+- **`RuntimeMinification:CacheBuster = Version`** — a v13 Production-mode validator; the site won't
+  boot with the default/`Timestamp` cache buster. (v17 has no such requirement.)
 - `Hosting:Debug = false`, Serilog `MinimumLevel:Default = Error`.
 - v13 still has macros, so `Content:MacroErrors = Inline` is appropriate here (unlike v17).
-- Do **not** add `Global:UseHttps` to satisfy the stock Umbraco HTTPS requirement — TLS terminates at
-  the edge and the `UseHttpsValidator` is removed via `DockerChecksRemoverComposer`.
+- Do **not** add `Global:UseHttps` or `UmbracoApplicationUrl`: TLS terminates at the edge and the
+  `UseHttpsValidator` is removed via `DockerChecksRemoverComposer`, while `UmbracoApplicationUrl` is
+  platform-injected and already satisfies its Production-mode validator.
