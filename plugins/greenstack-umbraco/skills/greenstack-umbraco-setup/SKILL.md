@@ -67,6 +67,14 @@ Both versions:
 
    **v13 also requires** `RuntimeMinification:CacheBuster = Version` — a v13 Production-mode validator; the site won't boot without a fixed cache buster — and sets `Content:MacroErrors = Inline`. Per-version detail: `references/umbraco-13.md`, `references/umbraco-17.md`.
 
+## Precompiled views — build to catch issues (Production mode)
+
+With the Razor flags removed, views compile **at build**, so problems surface as build errors instead of runtime 404s. Three things bite here:
+
+- **Build the web project before deploying.** `dotnet build -c Release` bubbles up every Razor/view error — a missing or framework-incompatible package model, a bad `@inherits`, a view referencing a type that isn't resolvable at compile time. Fix them at build; don't discover them as 404s in the container. (Example: a kit pinned a design-kit package to a major whose latest build targeted a newer `net` than the project — the views only failed once precompilation was on.)
+- **Umbraco Forms views must reach the output.** Precompilation does not carry the Forms theme views, so **`Views/Partials/Forms` must be copied to the publish output** (e.g. a `Content`/`CopyToOutputDirectory` item in the csproj) — otherwise Forms render blank/500 in Production.
+- **Linux is case-sensitive.** GreenStack containers are Linux: file and folder paths must match case **exactly** (`Views/Partials/Forms`, not `views/partials/forms`; `_ViewImports.cshtml`, partial names, `App_Plugins` asset paths). A casing mismatch builds and runs on Windows but 404s / fails to find the view on the container.
+
 ## Load-balanced vs single-instance
 
 Topology is the service's **replica count in UmbPanel** (`docker_get_service`): single = 1, load-balanced = >1.
@@ -93,6 +101,15 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 - **Webhook chicken-and-egg:** the deploy `WEBHOOK_ENDPOINT` does not exist until **after** the first deploy, so the **first push is expected to fail at the webhook step**. Sequence: push → image builds/pushes → webhook step fails → read the webhook URL from UmbPanel (`docker_get_service` returns it) → store it as a CI secret → re-run.
 - **Verify:** GET `https://{service}.umbpanel.io` until it responds healthy.
 
+## Environments, promotion & recommended add-ons
+
+GreenStack customer sites run **one service per environment, each deploying from its own branch**, and promote through git + uSync. Detail: `references/environments-and-promotion.md`.
+
+- **Branches:** `master` = production, `staging` = staging. Feature → **PR into `staging`** → verify → **PR `staging` → `master`** to release. Each merge deploys that environment.
+- **Settings & Dictionary via uSync** (free), source-controlled so they promote with the branch. **Reclassify Dictionary items as Settings** so they sync with the settings group, not as content.
+- **Content:** uSync export is fine for the **initial** seed; use **uSync.Complete** for ongoing content promotion between environments.
+- **Forms captcha:** prefer **Cloudflare Turnstile** (GreenStack is already Cloudflare-fronted) over hCaptcha/reCAPTCHA; for Umbraco Forms use **uCaptcha** with its Turnstile provider.
+
 ## Common mistakes (all seen in a cold baseline)
 
 | Mistake | Reality |
@@ -110,3 +127,6 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 | `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind and models aren't disabled |
 | v13 Production mode with no fixed cache buster | v13's `RuntimeMinificationValidator` fails boot — set `RuntimeMinification:CacheBuster=Version` (not `Timestamp`) |
 | Adding `Global:UseHttps=true` for Production mode | Not needed — edge TLS; `UseHttpsValidator` is removed by `DockerChecksRemoverComposer`, and `UmbracoApplicationUrl` is injected |
+| Umbraco Forms renders blank / 500 in Production | `Views/Partials/Forms` isn't in the publish output — precompilation doesn't carry it; add a `Content`/`CopyToOutputDirectory` item for it |
+| View 404s on the container but works on Windows | Linux is case-sensitive — match path case exactly (`Views/Partials/Forms`, `App_Plugins`, partial names) |
+| A view's package model fails only after enabling Production mode | Precompilation needs the type resolvable at build — `dotnet build -c Release` surfaces it; pin the package to a framework-compatible version |
