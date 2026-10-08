@@ -46,6 +46,26 @@ Both versions:
 3. **Remove the HTTPS runtime validator** — `DockerChecksRemoverComposer` (`RuntimeModeValidators().Remove<UseHttpsValidator>()`).
 4. **Persist Data Protection keys to `/app/keys`** — `DataProtectionComposer`. The shared mount makes keys consistent across replicas; no custom path or `SetApplicationName` needed.
 5. **Dockerfile** from the samples — non-root `1000`, `EXPOSE 8080`, `--locked-mode` restore (commit `packages.lock.json`). Don't set `ASPNETCORE_URLS`/env; the base image and UmbPanel handle it.
+6. **Production runtime mode + `appsettings.Production.json`** — GreenStack injects `ASPNETCORE_ENVIRONMENT=Production`, so an `appsettings.Production.json` is loaded over `appsettings.json`. Turn on Umbraco's **Production runtime mode** and the rest of the production hardening there. Production mode **requires precompiled views and models**, so you must also:
+   - **Remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj`.** Left in, views aren't precompiled and every template **404s** under Production mode.
+   - Use `ModelsBuilder:ModelsMode = Nothing` (compiled models) — the value is **`Nothing`, not `None`** (`None` fails to bind).
+
+   Minimum file — do **not** add `UmbracoApplicationUrl`, `BackOfficeHost`, `MainDomLock`, the Examine factory, the DSN, or `Global:UseHttps`: the platform injects the first five, and the HTTPS validator is *removed* (item 3), not satisfied here.
+
+   ```json
+   {
+     "Serilog": { "MinimumLevel": { "Default": "Error" } },
+     "Umbraco": {
+       "CMS": {
+         "Runtime": { "Mode": "Production" },
+         "Hosting": { "Debug": false },
+         "ModelsBuilder": { "ModelsMode": "Nothing" }
+       }
+     }
+   }
+   ```
+
+   Per-version extras (e.g. v13's `Content:MacroErrors`): `references/umbraco-13.md`, `references/umbraco-17.md`.
 
 ## Load-balanced vs single-instance
 
@@ -86,3 +106,6 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 | "Run as root" to fix volume writes | Template runs non-root `1000` — keep it |
 | Baking `ASPNETCORE_ENVIRONMENT` / secrets into the image | Injected by UmbPanel per environment |
 | Setting `DisableElectionForSingleServer` on a multi-replica site | Only for single-instance; leave election automatic when load-balanced |
+| Leaving `<RazorCompileOnBuild/Publish>false` in the `.csproj` | Production runtime mode needs precompiled views — every template 404s. Remove both properties |
+| `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind and models aren't disabled |
+| No `appsettings.Production.json` (Debug on, no `Runtime:Mode`) | Add it: `Runtime:Mode=Production`, `Hosting:Debug=false`, `ModelsMode=Nothing`, Serilog `Error` |

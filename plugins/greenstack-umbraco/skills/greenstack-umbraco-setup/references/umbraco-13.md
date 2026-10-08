@@ -42,3 +42,20 @@ Includes the disabled-check above, `RuntimeMinification:UseHttps=false`,
 `Unattended:UpgradeUnattended=true`, `Global:SanitizeTinyMce=true`,
 `Security:AllowConcurrentLogins=false`. It does **not** set `UmbracoApplicationUrl`, `MainDomLock`,
 the Examine factory, or the DSN — those are injected (see `greenstack-contract.md`).
+
+## Production runtime mode (`appsettings.Production.json`)
+
+`ASPNETCORE_ENVIRONMENT=Production` is injected, so add an `appsettings.Production.json` that enables
+**Production runtime mode** and the production hardening (see the SKILL for the minimum file and the
+"don't set these" list). Production mode is strict:
+
+- **Precompiled views are required.** Remove `<RazorCompileOnBuild>false</RazorCompileOnBuild>` and
+  `<RazorCompileOnPublish>false</RazorCompileOnPublish>` from the `.csproj` (if present) — otherwise
+  templates 404. The Dockerfile already builds with `--configuration Release`; keep it.
+- **`ModelsBuilder:ModelsMode = Nothing`** (compiled models — `Nothing`, not `None`). Document-type
+  changes are made in a Development-mode environment and the models rebuilt/republished; they are not
+  generated at runtime in Production.
+- `Hosting:Debug = false`, Serilog `MinimumLevel:Default = Error`.
+- v13 still has macros, so `Content:MacroErrors = Inline` is appropriate here (unlike v17).
+- Do **not** add `Global:UseHttps` to satisfy the stock Umbraco HTTPS requirement — TLS terminates at
+  the edge and the `UseHttpsValidator` is removed via `DockerChecksRemoverComposer`.
