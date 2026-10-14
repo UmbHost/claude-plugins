@@ -20,10 +20,10 @@ claude plugin install <plugin>@umbhost
 ### `umbhost-mcp`
 
 Connects Claude to the [UmbHost MCP server](https://umbhost.net/mcp) and teaches an agent to
-find, price, and order UmbHost Umbraco hosting — list live plans, price a fully configured order
-(config options, add-ons, optional domain, monthly/annual, six currencies), check domain
-availability, and start a checkout a human completes. Prices are live and exclude VAT; the agent
-never takes payment.
+find, price, and order UmbHost Umbraco hosting and UmbCheckout licences — list live plans, price
+a fully configured order (config options, add-ons, optional domain, monthly/annual, six
+currencies), check domain availability, and start a checkout a human completes. Prices are live
+and exclude VAT; the agent never takes payment.
 
 ```bash
 claude plugin install umbhost-mcp@umbhost
