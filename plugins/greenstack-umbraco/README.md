@@ -17,6 +17,17 @@ which connects to the authenticated UmbPanel MCP as the signed-in member:
 claude plugin install umbpanel-mcp@umbhost
 ```
 
+## Pairs with `umbhost-kb-mcp`
+
+The skill looks up UmbHost-specific details and troubleshooting in the
+[UmbHost Knowledgebase](https://kb.umbhost.net). Install the [`umbhost-kb-mcp`](../../umbhost-kb-mcp)
+plugin to let Claude search and read those articles directly (public, no login); without it the skill
+falls back to fetching `https://kb.umbhost.net/llms.txt`:
+
+```
+claude plugin install umbhost-kb-mcp@umbhost
+```
+
 ## Install (Claude Code)
 
 ```
@@ -43,7 +54,8 @@ New-Item -ItemType Directory -Force "$HOME\.agents\skills" | Out-Null
 Copy-Item -Recurse claude-plugins\plugins\greenstack-umbraco\skills\greenstack-umbraco-setup "$HOME\.agents\skills\"
 ```
 
-Update later by re-copying after a `git pull`. For the UmbPanel MCP in those runtimes, add the
-server from the MCP Registry or your client's MCP config (see the `umbpanel-mcp` plugin / server).
+Update later by re-copying after a `git pull`. For the UmbPanel and Knowledgebase MCPs in those
+runtimes, add the servers from the MCP Registry or your client's MCP config (see the `umbpanel-mcp`
+and `umbhost-kb-mcp` plugins / servers).
 
-Pre-release (`0.1.0`).
+Pre-release (`0.2.0`).
