@@ -101,6 +101,26 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 - **Webhook chicken-and-egg:** the deploy `WEBHOOK_ENDPOINT` does not exist until **after** the first deploy, so the **first push is expected to fail at the webhook step**. Sequence: push → image builds/pushes → webhook step fails → read the webhook URL from UmbPanel (`docker_get_service` returns it) → store it as a CI secret → re-run.
 - **Verify:** GET `https://{service}.umbpanel.io` until it responds healthy.
 
+## UmbHost Knowledgebase — look it up, don't guess
+
+The [UmbHost Knowledgebase](https://kb.umbhost.net) has a GreenStack category with the canonical
+how-tos and troubleshooting pages this skill summarises (forwarded headers, the HTTPS health check
+and runtime validator, Data Protection keys, Examine, SignalR replicas, www-redirect exclusions,
+persisted files, logs, long boot times, "page not found after deployment", the starter
+Dockerfile/pipelines), plus articles on DNS, the Cloudflare CDN, databases, email and SSL.
+
+- **With the `umbhost-kb-mcp` plugin** (public, read-only `https://kb.umbhost.net/mcp`): call
+  `search_docs` with the symptom or error text, then `get_doc` on the best match before answering.
+  Link the article URL so the person can follow its screenshots.
+- **Without it:** fetch `https://kb.umbhost.net/llms.txt` (index) or
+  `https://kb.umbhost.net/llms-full.txt` (every article), or browse
+  `https://kb.umbhost.net/greenstack/`.
+
+Use it for anything UmbHost-specific outside this skill (CDN purge and caching options, DNS records,
+database details, SMTP, error messages a customer pastes). If the knowledgebase and this skill
+disagree, follow the knowledgebase and mention the conflict. If there is no article, say so rather
+than inventing UmbHost policy, limits or settings.
+
 ## Environments, promotion & recommended add-ons
 
 GreenStack customer sites run **one service per environment, each deploying from its own branch**, and promote through git + uSync. Detail: `references/environments-and-promotion.md`.

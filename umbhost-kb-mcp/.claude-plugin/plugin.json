@@ -1,0 +1,17 @@
+{
+  "name": "umbhost-kb-mcp",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Connects Claude to the UmbHost Knowledgebase MCP server so an agent can search and read UmbHost's help articles — GreenStack, .NET/Umbraco hosting, databases, DNS, email, SSL, CDN, deployments and UmbCheckout — instead of guessing.",
+  "author": {
+    "name": "UmbHost",
+    "url": "https://github.com/UmbHost"
+  },
+  "homepage": "https://kb.umbhost.net",
+  "repository": "https://github.com/UmbHost/claude-plugins",
+  "documentationUrl": "https://github.com/UmbHost/claude-plugins#readme",
+  "supportUrl": "https://umbhost.net/contact",
+  "privacyPolicyUrl": "https://umbhost.net/legal/privacy-policy",
+  "termsOfServiceUrl": "https://umbhost.net/legal/terms-conditions",
+  "keywords": ["umbraco", "umbhost", "greenstack", "knowledgebase", "documentation", "mcp"]
+}

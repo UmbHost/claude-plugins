@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "net.umbhost/umbhost-kb-mcp",
+  "title": "UmbHost Knowledgebase",
+  "description": "Search and read UmbHost help articles: GreenStack, Umbraco hosting, DNS, email, SSL and more.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/UmbHost/claude-plugins",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://kb.umbhost.net/mcp"
+    }
+  ]
+}
