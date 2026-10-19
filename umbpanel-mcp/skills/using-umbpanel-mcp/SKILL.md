@@ -1,6 +1,6 @@
 ---
 name: using-umbpanel-mcp
-description: Use when managing a member's EXISTING UmbHost hosting through UmbPanel — GreenStack Docker services (status, env vars, registry, deploys, deploy webhook, containers, logs/stats), Cloudflare (DNS, zone settings, bot management, cache purge, analytics, custom hostnames), databases (firewall rules, BACPAC exports), SFTP accounts, email (Mailgun domains, postboxes, events, usage, SMTP), registered domains (nameservers, contacts, DNS), sharing a service with other people, support tickets and licences, and IIS/SolidCP logins. Drives the authenticated UmbPanel MCP as the signed-in member (OAuth). Not for buying hosting (that is the UmbHost storefront MCP) and not for configuring the Umbraco app itself (that is the greenstack-umbraco-setup skill).
+description: Use when managing a member's EXISTING UmbHost hosting through UmbPanel — GreenStack Docker services (status, env vars, registry, deploys, deploy webhook, containers, logs/stats, running a command in a container, reading container files), Cloudflare (DNS, zone settings, bot management, cache purge, analytics, custom hostnames), databases (firewall rules, BACPAC exports), SFTP accounts and site files (list, download, upload), email (Mailgun domains, postboxes, events, usage, SMTP), registered domains (nameservers, contacts, DNS), sharing a service with other people, support tickets and licences, and IIS/SolidCP logins. Drives the authenticated UmbPanel MCP as the signed-in member (OAuth). Not for buying hosting (that is the UmbHost storefront MCP) and not for configuring the Umbraco app itself (that is the greenstack-umbraco-setup skill).
 ---
 
 # Using the UmbPanel MCP
@@ -32,7 +32,8 @@ MCP is how that skill carries out the UmbPanel-side steps.
   - Called again with `confirm: true`, they execute.
   - **Always show the person the preview and get agreement before confirming.**
   - Gated: deletes, stopping a service, deploying, initialising a stack, clearing the temp cache,
-    container stop/kill, nameserver and domain-contact changes, inviting someone to a service, and
+    container stop/kill, running a command in a container, replacing an existing file over SFTP,
+    nameserver and domain-contact changes, inviting someone to a service, and
     revoking access.
 - **Overwrites are not gated, but are real.** These change live configuration with no preview, so state
   the change before making it:
@@ -77,13 +78,13 @@ server actually offers.
 |------|-------|
 | Services | `services_list_my_services`, `server_info` |
 | Docker services | `docker_list_services`, `docker_get_service` (status, image, replicas, healthcheck, deploy delay), `docker_get_deploy_webhook`, `docker_get_environment_variables`, `docker_set_environment_variable`, `docker_remove_environment_variable`*, `docker_start_service`, `docker_stop_service`*, `docker_deploy_latest_image`*, `docker_initialize_stack`*, `docker_set_healthcheck`, `docker_set_deployment_delay`, `docker_clear_media_cache`, `docker_clear_temp_cache`* |
-| Containers | `docker_list_containers`, `docker_get_container_stats`, `docker_get_container_logs`, `docker_container_action` (start/restart/stop/kill; all but start are gated) |
+| Containers | `docker_list_containers`, `docker_get_container_stats`, `docker_get_container_logs`, `docker_container_action` (start/restart/stop/kill; all but start are gated), `docker_exec_command`*, `docker_read_container_file` |
 | Registries | `docker_list_registries`, `docker_get_registry`, `docker_create_registry`, `docker_update_registry_credentials`, `docker_delete_registry`*, `docker_use_registry_for_service` |
 | Cloudflare DNS | `cloudflare_dns_list_records`, `cloudflare_dns_get_record`, `cloudflare_dns_create_record`, `cloudflare_dns_update_record`, `cloudflare_dns_set_proxy`, `cloudflare_dns_delete_record`* |
 | Cloudflare zone | `cloudflare_zone_get_settings`, `cloudflare_zone_set_setting`, `cloudflare_bot_get`, `cloudflare_bot_update`, `cloudflare_cdn_purge`, `cloudflare_analytics_get` |
 | Custom hostnames | `cloudflare_hostnames_list`, `cloudflare_hostname_get` (the DNS and validation records to add), `cloudflare_hostname_limits`, `cloudflare_hostname_zones`, `cloudflare_hostname_create`, `cloudflare_hostname_validate`, `cloudflare_hostname_delete`* |
 | Databases | `databases_list`, `databases_get`, `databases_get_onprem`, `databases_list_firewall_rules`, `databases_add_firewall_rule`, `databases_delete_firewall_rule`*, `databases_request_export`, `databases_list_exports`, `databases_get_export_download_url`, `databases_delete_export`* |
-| SFTP | `sftp_list_users`, `sftp_get_user`, `sftp_create_user`, `sftp_reset_password`, `sftp_delete_user`* |
+| SFTP | `sftp_list_users`, `sftp_get_user`, `sftp_create_user`, `sftp_reset_password`, `sftp_delete_user`*, `sftp_list_files`, `sftp_download_file`, `sftp_upload_file` (replacing an existing file is gated) |
 | Email | `email_list_domains`, `email_get_domain_info` (DNS records to add), `email_verify_domain`, `email_list_postboxes`, `email_create_postbox`, `email_reset_postbox_password`, `email_delete_postbox`*, `email_list_events`, `email_get_stored_message`, `email_get_usage`, `smtp_list_accounts` |
 | Registered domains | `domain_list`, `domain_check_availability`, `domain_get_info`, `domain_get_nameservers`, `domain_set_nameservers`*, `domain_get_contacts`, `domain_set_contacts`*, `domain_dns_list_records`, `domain_dns_get_record`, `domain_dns_create_record`, `domain_dns_update_record`, `domain_dns_set_proxy`, `domain_dns_delete_record`* |
 | Sharing a service | `service_access_list`, `service_access_invite`*, `service_access_resend_invitation`, `service_access_revoke_invitation`*, `service_access_revoke`*. All are **owner only**; a delegated member gets `NotOwner`. |
@@ -111,6 +112,22 @@ server actually offers.
 5. **Verify.** Use `docker_get_service` and `docker_get_container_logs`, then fetch the site until it
    responds healthy.
 
+**Debug a misbehaving site**
+1. **Container logs first.** `docker_get_container_logs` shows stdout and stderr: startup failures, unhandled
+   exceptions, crash loops.
+2. **Umbraco's own logs.** Read `umbraco/Logs` with `docker_read_container_file` (no binary needed in the
+   image), or with `sftp_list_files` and `sftp_download_file` from the site's persistent files.
+3. **Exec last, and minimally.** `docker_exec_command` runs one command as an argv array with no shell.
+   GreenStack images are minimal: there is often no `bash` and sometimes no `sh`, so try the binary
+   directly (`["dotnet", "--info"]`). Use `useShell: true` only if the image has `/bin/sh`. A missing binary
+   comes back as `Invalid` with "executable file not found". Gated; show the command first.
+
+**Persistence: mounts vs the container.** `docker_exec_command` and `docker_read_container_file` return the
+container's mounts. Only files under a mount survive a deploy or restart; anything written elsewhere in the
+container is lost. To change a site's files for good, write them with `sftp_upload_file`, which reaches the
+persistent volume, and prefer changing the app in source control and redeploying. Uploads and downloads are
+capped at 1 MB; use an SFTP client for bigger files (`sftp_get_user` gives the connection details).
+
 **Add a custom hostname**
 1. Call `cloudflare_hostname_create` with the hostname and the `dockerServiceKey` to route it to.
 2. Call `cloudflare_hostname_get` for the CNAME target and the validation records, and give them to the
@@ -135,7 +152,7 @@ Then `tickets_create`. Attachments can only be added in the portal.
   operations.
 - **No buying.** It takes no payment and can't buy hosting, domains or add-ons; use the storefront MCP.
 - **Portal-only actions:**
-  - the interactive container terminal;
+  - the interactive container terminal (single commands work via `docker_exec_command`);
   - the StackCP (20i) single sign-on;
   - ticket attachment upload and download.
 - **No app code.** It doesn't configure the Umbraco application code; pair it with the
