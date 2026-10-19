@@ -1,8 +1,8 @@
 {
   "name": "umbpanel-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
-  "description": "Connects Claude to the UmbPanel MCP server so an agent can manage a member's own UmbHost GreenStack hosting — read services, Cloudflare DNS, registries and deploys — acting as the signed-in member over OAuth.",
+  "description": "Connects Claude to the UmbPanel MCP server so an agent can manage a member's own UmbHost hosting — GreenStack Docker services and deploys, Cloudflare DNS/zone/custom hostnames, databases, SFTP, email, registered domains, service sharing, support tickets and licences — acting as the signed-in member over OAuth.",
   "author": {
     "name": "UmbHost",
     "url": "https://github.com/UmbHost"
@@ -13,5 +13,12 @@
   "supportUrl": "https://umbhost.net/contact",
   "privacyPolicyUrl": "https://umbhost.net/legal/privacy-policy",
   "termsOfServiceUrl": "https://umbhost.net/legal/terms-conditions",
-  "keywords": ["umbraco", "umbpanel", "umbhost", "greenstack", "mcp", "hosting"]
+  "keywords": [
+    "umbraco",
+    "umbpanel",
+    "umbhost",
+    "greenstack",
+    "mcp",
+    "hosting"
+  ]
 }

@@ -19,7 +19,7 @@
     {
       "name": "umbpanel-mcp",
       "source": "./umbpanel-mcp",
-      "description": "Connects Claude to the UmbPanel MCP server to manage a member's own GreenStack hosting — services, Cloudflare DNS, registries and deploys — acting as the signed-in member over OAuth."
+      "description": "Connects Claude to the UmbPanel MCP server to manage a member's own UmbHost hosting — Docker services and deploys, Cloudflare, databases, SFTP, email, domains, service sharing, tickets and licences — acting as the signed-in member over OAuth."
     }
   ]
 }
