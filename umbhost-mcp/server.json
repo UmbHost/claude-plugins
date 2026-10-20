@@ -3,7 +3,7 @@
   "name": "net.umbhost/umbhost-mcp",
   "title": "UmbHost — Umbraco hosting storefront",
   "description": "Find, price and order UmbHost Umbraco hosting, UmbCheckout licences and domains; a human pays.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "url": "https://github.com/UmbHost/claude-plugins",
     "source": "github"
