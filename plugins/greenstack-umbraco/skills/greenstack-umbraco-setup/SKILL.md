@@ -98,7 +98,7 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 
 - **Registry:** add a registry credential (any Portainer-supported registry) with a read-scoped token (e.g. a GHCR PAT with `read:packages`).
 - **Image name:** enter the **bare image name only** — no registry host, username, or org. GreenStack pulls the `latest` tag automatically.
-- **Webhook chicken-and-egg:** the deploy `WEBHOOK_ENDPOINT` does not exist until **after** the first deploy, so the **first push is expected to fail at the webhook step**. Sequence: push → image builds/pushes → webhook step fails → read the webhook URL from UmbPanel (`docker_get_service` returns it) → store it as a CI secret → re-run.
+- **Webhook chicken-and-egg:** the deploy `WEBHOOK_ENDPOINT` does not exist until **after** the first deploy, so the **first push is expected to fail at the webhook step**. Sequence: push → image builds/pushes → webhook step fails → read the webhook URL from UmbPanel (`docker_get_deploy_webhook` returns it) → store it as a CI secret → re-run.
 - **Verify:** GET `https://{service}.umbpanel.io` until it responds healthy.
 
 ## Environments, promotion & recommended add-ons

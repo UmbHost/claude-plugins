@@ -1,6 +1,6 @@
 {
   "name": "greenstack-umbraco",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "Configure, deploy and troubleshoot Umbraco 13/17 sites on UmbHost GreenStack (single-instance or load-balanced). Pair with the umbpanel-mcp plugin to drive the UmbPanel side.",
   "author": {
