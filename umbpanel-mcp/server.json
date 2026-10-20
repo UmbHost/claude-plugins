@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "net.umbhost/umbpanel-mcp",
   "title": "UmbPanel — UmbHost GreenStack management",
-  "description": "Manage your UmbHost GreenStack hosting: services, DNS, registries and deploys, as the member.",
-  "version": "0.1.0",
+  "description": "Manage your UmbHost hosting as the member: Docker services, deploys and container debugging, Cloudflare, databases, SFTP and site files, email, domains, service sharing, tickets and licences.",
+  "version": "0.2.0",
   "repository": {
     "url": "https://github.com/UmbHost/claude-plugins",
     "source": "github"
