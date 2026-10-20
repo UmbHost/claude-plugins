@@ -1,6 +1,6 @@
 ---
 name: using-umbpanel-mcp
-description: Use when managing a member's EXISTING UmbHost hosting through UmbPanel — GreenStack Docker services (status, env vars, registry, deploys, deploy webhook, containers, logs/stats, running a command in a container, reading container files), Cloudflare (DNS, zone settings, bot management, cache purge, analytics, custom hostnames), databases (firewall rules, BACPAC exports), SFTP accounts and site files (list, download, upload), email (Mailgun domains, postboxes, events, usage, SMTP), registered domains (nameservers, contacts, DNS), sharing a service with other people, support tickets and licences, and IIS/SolidCP logins. Drives the authenticated UmbPanel MCP as the signed-in member (OAuth). Not for buying hosting (that is the UmbHost storefront MCP) and not for configuring the Umbraco app itself (that is the greenstack-umbraco-setup skill).
+description: Use when managing a member's EXISTING UmbHost hosting through UmbPanel — whether the platform has an incident, GreenStack Docker services (status, region, preview URLs, disk usage against quota, env vars, registry, deploys, deploy webhook, containers, logs/stats, running a command in a container, reading container files), Cloudflare for every hostname the member reaches (full zones, custom hostnames, temporary hostnames: DNS, zone settings, bot management, cache purge, analytics), databases (firewall rules, BACPAC exports), SFTP accounts and site files, email (Mailgun domains, postboxes, events, usage, SMTP), registered domains (nameservers, contacts, DNS), service sharing, support tickets and licences, and IIS/SolidCP logins. Drives the authenticated UmbPanel MCP as the signed-in member (OAuth). Not for buying hosting (that is the UmbHost storefront MCP) and not for configuring the Umbraco app itself (that is the greenstack-umbraco-setup skill).
 ---
 
 # Using the UmbPanel MCP
@@ -60,10 +60,20 @@ Start from `services_list_my_services`, which gives the member's hosting service
 
 - **Docker environments:** `docker_list_services` gives each environment's **`dockerServiceKey`**.
   Containers are addressed by the container id and node from `docker_list_containers`.
-- **Cloudflare:**
-  - A service's hostnames give a **`hostnameId`**. The DNS, zone-settings and bot tools need a
-    **full zone** of the member's own, and refuse a custom hostname.
-  - Custom hostnames are addressed by their Cloudflare id, from `cloudflare_hostnames_list`.
+- **Cloudflare:** start from `cloudflare_list_all_hostnames`. It lists every hostname the service reaches
+  through Cloudflare, each with its `type`, its ids and the `tools` that work on it:
+  - **`zone`** (a full Cloudflare zone of the member's own): `hostnameId` for DNS, zone settings, bot
+    management and CDN purge (`hostnameType: Zone`), and `zoneId` for analytics.
+  - **`custom_hostname`** (on a SaaS zone shared with other customers): `cloudflareHostnameId` for the
+    hostname tools, `hostnameId` for a purge scoped to that hostname, and `zoneId` plus the `hostname` for
+    analytics filtered to it (no `dns` tab).
+  - **`temporary`** (an environment's `*.umbpanel.io` address): `hostnameId` (the `dockerServiceKey`) for a
+    purge with `hostnameType: Temporary`.
+  - DNS, zone settings and bot management only ever work on a full zone. A custom or temporary hostname
+    shares its zone with other customers, so those tools refuse it. Offer the member a full zone (via a
+    ticket) instead.
+  - `cloudflare_hostnames_list` adds each custom hostname's live Cloudflare and certificate status. A
+    hostname Cloudflare no longer has shows as `unavailable`; it can still be deleted.
 - **Registered domains:** `domain_list` gives each **`domainKey`**. Domain DNS works only when the
   domain has a linked Cloudflare zone.
 - **Email domains:** addressed by name, from `email_list_domains`.
@@ -76,12 +86,12 @@ server actually offers.
 
 | Area | Tools |
 |------|-------|
-| Services | `services_list_my_services`, `server_info` |
-| Docker services | `docker_list_services`, `docker_get_service` (status, image, replicas, healthcheck, deploy delay), `docker_get_deploy_webhook`, `docker_get_environment_variables`, `docker_set_environment_variable`, `docker_remove_environment_variable`*, `docker_start_service`, `docker_stop_service`*, `docker_deploy_latest_image`*, `docker_initialize_stack`*, `docker_set_healthcheck`, `docker_set_deployment_delay`, `docker_clear_media_cache`, `docker_clear_temp_cache`* |
+| Services and platform | `services_list_my_services`, `platform_status` (active incidents and maintenance), `server_info` |
+| Docker services | `docker_list_services`, `docker_get_service` (status, image, replicas, healthcheck, deploy delay), `docker_get_service_information` (region, preview URLs, image tag/registry, mounts, disk usage vs quota), `docker_get_deploy_webhook`, `docker_get_environment_variables`, `docker_set_environment_variable`, `docker_remove_environment_variable`*, `docker_start_service`, `docker_stop_service`*, `docker_deploy_latest_image`*, `docker_initialize_stack`*, `docker_set_healthcheck`, `docker_set_deployment_delay`, `docker_clear_media_cache`, `docker_clear_temp_cache`* |
 | Containers | `docker_list_containers`, `docker_get_container_stats`, `docker_get_container_logs`, `docker_container_action` (start/restart/stop/kill; all but start are gated), `docker_exec_command`*, `docker_read_container_file` |
 | Registries | `docker_list_registries`, `docker_get_registry`, `docker_create_registry`, `docker_update_registry_credentials`, `docker_delete_registry`*, `docker_use_registry_for_service` |
 | Cloudflare DNS | `cloudflare_dns_list_records`, `cloudflare_dns_get_record`, `cloudflare_dns_create_record`, `cloudflare_dns_update_record`, `cloudflare_dns_set_proxy`, `cloudflare_dns_delete_record`* |
-| Cloudflare zone | `cloudflare_zone_get_settings`, `cloudflare_zone_set_setting`, `cloudflare_bot_get`, `cloudflare_bot_update`, `cloudflare_cdn_purge`, `cloudflare_analytics_get` |
+| Cloudflare zone | `cloudflare_list_all_hostnames`, `cloudflare_zone_get_settings`, `cloudflare_zone_set_setting`, `cloudflare_bot_get`, `cloudflare_bot_update`, `cloudflare_cdn_purge`, `cloudflare_analytics_get` |
 | Custom hostnames | `cloudflare_hostnames_list`, `cloudflare_hostname_get` (the DNS and validation records to add), `cloudflare_hostname_limits`, `cloudflare_hostname_zones`, `cloudflare_hostname_create`, `cloudflare_hostname_validate`, `cloudflare_hostname_delete`* |
 | Databases | `databases_list`, `databases_get`, `databases_get_onprem`, `databases_list_firewall_rules`, `databases_add_firewall_rule`, `databases_delete_firewall_rule`*, `databases_request_export`, `databases_list_exports`, `databases_get_export_download_url`, `databases_delete_export`* |
 | SFTP | `sftp_list_users`, `sftp_get_user`, `sftp_create_user`, `sftp_reset_password`, `sftp_delete_user`*, `sftp_list_files`, `sftp_download_file`, `sftp_upload_file` (replacing an existing file is gated) |
@@ -113,11 +123,17 @@ server actually offers.
    responds healthy.
 
 **Debug a misbehaving site**
-1. **Container logs first.** `docker_get_container_logs` shows stdout and stderr: startup failures, unhandled
+0. **Rule out the platform.** `platform_status` lists active incidents and maintenance.
+   - If `allOperational` is `false`, tell the person about the incident before digging into their site.
+   - `null` (with `statusAvailable: false`) means the status page couldn't be read. Never report that as
+     "all clear".
+1. **Disk.** `docker_get_service_information` shows disk usage against the storage quota. A full volume
+   breaks uploads, media and logs.
+2. **Container logs.** `docker_get_container_logs` shows stdout and stderr: startup failures, unhandled
    exceptions, crash loops.
-2. **Umbraco's own logs.** Read `umbraco/Logs` with `docker_read_container_file` (no binary needed in the
+3. **Umbraco's own logs.** Read `umbraco/Logs` with `docker_read_container_file` (no binary needed in the
    image), or with `sftp_list_files` and `sftp_download_file` from the site's persistent files.
-3. **Exec last, and minimally.** `docker_exec_command` runs one command as an argv array with no shell.
+4. **Exec last, and minimally.** `docker_exec_command` runs one command as an argv array with no shell.
    GreenStack images are minimal: there is often no `bash` and sometimes no `sh`, so try the binary
    directly (`["dotnet", "--info"]`). Use `useShell: true` only if the image has `/bin/sh`. A missing binary
    comes back as `Invalid` with "executable file not found". Gated; show the command first.
@@ -133,6 +149,11 @@ capped at 1 MB; use an SFTP client for bigger files (`sftp_get_user` gives the c
 2. Call `cloudflare_hostname_get` for the CNAME target and the validation records, and give them to the
    person to add at their DNS.
 3. Call `cloudflare_hostname_validate` once they're in place.
+
+**Site traffic, cache and security stats**
+Call `cloudflare_list_all_hostnames`, then `cloudflare_analytics_get` with the hostname's `zoneId` and a
+`tab` (`traffic`, `performance`, `security`, `cache`, `origin`, or `dns` for a full zone only). For a custom
+hostname, also pass its `hostname`. `since` and `until` are minutes relative to now (default the last 24h).
 
 **DNS change**
 Read the records first (`cloudflare_dns_list_records` or `domain_dns_list_records`), show the exact
