@@ -28,7 +28,7 @@ You cannot take payment. `begin_checkout` seeds a cart and returns a `checkoutUr
 | `customer_reviews` | Real, published UmbHost customer reviews (verbatim) and the Trustpilot rating. Optional `topic`: `support`, `migration`, `green`, `value`. Quote reviews word for word; never reword them. |
 | `sustainability_impact` | UmbHost's sustainability facts and live Ecologi impact (trees planted, tonnes of CO2 offset). |
 | `list_plans` | List buyable plans — hosting, email, and licences — with live prices, resources, config options, and add-ons. Each carries a `group` (`Hosting`, `Email`, `Licence`). Optional `group` filter (`hosting`, `email`, `licence`) and `currency`. |
-| `get_plan` | Fetch one plan by its `key` (from `list_plans`) with its full per-cycle prices, config options, and add-ons. |
+| `get_plan` | Fetch one plan by its `key` with its full per-cycle prices, config options, and add-ons. The key is the GUID `list_plans` returns, not a name or slug like `greenstack-core`; an unknown key returns an "Unknown plan key" error, so call `list_plans` first. |
 | `quote` | Price a **configured** order: base plan + chosen config options + add-ons at a billing cycle and currency, with an optional domain priced as a **separate annual line**. Returns the same figure the website calculator shows. |
 | `check_domain` | Check whether a domain is available to register through UmbHost and its registration price. |
 | `begin_checkout` | Seed a server-side cart (plan + cycle + config + add-ons, plus an optional linked domain for hosting) and return the authoritative cart total plus a `checkoutUrl` for a human to complete. Takes no payment. |
