@@ -3,7 +3,8 @@
   "name": "net.umbhost/umbhost-kb-mcp",
   "title": "UmbHost Knowledgebase",
   "description": "Search and read UmbHost help articles: GreenStack, Umbraco hosting, DNS, email, SSL and more.",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "websiteUrl": "https://umbhost.net",
   "repository": {
     "url": "https://github.com/UmbHost/claude-plugins",
     "source": "github"

@@ -3,7 +3,8 @@
   "name": "net.umbhost/umbpanel-mcp",
   "title": "UmbPanel — UmbHost GreenStack management",
   "description": "Manage your UmbHost GreenStack hosting: deploys, Cloudflare, databases, SFTP, email and domains.",
-  "version": "0.3.0",
+  "version": "0.3.1",
+  "websiteUrl": "https://umbhost.net",
   "repository": {
     "url": "https://github.com/UmbHost/claude-plugins",
     "source": "github"
