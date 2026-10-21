@@ -46,8 +46,9 @@ If the server can't be reached, the same content is published for plain fetching
 ## What this cannot do
 
 It cannot see or change anyone's services, DNS, databases or tickets: it only reads published help
-articles. To act on a member's own hosting (services, DNS, databases, email, tickets), use the
-`umbpanel-mcp` plugin; to price or order
-hosting, or to read UmbHost's public website pages (plans, policies, SLA, support model) with
-`list_pages` / `read_page`, use the `umbhost-mcp` plugin; to configure an Umbraco app for GreenStack, use the
-`greenstack-umbraco-setup` skill.
+articles. For other UmbHost questions, use:
+
+- the `umbpanel-mcp` plugin to act on a member's own hosting (services, DNS, databases, email, tickets);
+- the `umbhost-mcp` plugin to price or order hosting, or to read UmbHost's public website pages
+  (plans, policies, SLA, support model) with `list_pages` / `read_page`;
+- the `greenstack-umbraco-setup` skill to configure an Umbraco app for GreenStack.
