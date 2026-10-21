@@ -55,4 +55,15 @@ alongside `greenstack-umbraco`.
 claude plugin install umbpanel-mcp@umbhost
 ```
 
+### `umbhost-kb-mcp`
+
+Connects Claude to the public [UmbHost Knowledgebase](https://kb.umbhost.net) MCP server
+([`https://kb.umbhost.net/mcp`](https://kb.umbhost.net/mcp)) so an agent can search and read
+UmbHost's help articles (`search_docs`, `get_doc`, `list_docs`) and cite them, instead of guessing.
+Read-only, no login. `greenstack-umbraco` uses it for platform details and troubleshooting.
+
+```bash
+claude plugin install umbhost-kb-mcp@umbhost
+```
+
 <!-- Plugins are added as entries in .claude-plugin/marketplace.json. -->
