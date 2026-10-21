@@ -45,8 +45,9 @@ claude plugin install greenstack-umbraco@umbhost
 ### `umbpanel-mcp`
 
 Connects Claude to the UmbPanel MCP server ([`https://www.umbpanel.io/mcp`](https://www.umbpanel.io/mcp))
-to **manage** a member's existing GreenStack hosting — read their services, set the registry/image,
-read the deploy webhook, trigger deploys, and manage Cloudflare DNS — acting as the signed-in member
+to **manage** a member's existing UmbHost hosting — GreenStack Docker services, registries, deploys and
+the deploy webhook; Cloudflare DNS, zone settings, cache and custom hostnames; databases, SFTP and email;
+registered domains; sharing a service; support tickets and licences — acting as the signed-in member
 over OAuth. The authenticated counterpart to `umbhost-mcp` (which *buys* hosting); often installed
 alongside `greenstack-umbraco`.
 
