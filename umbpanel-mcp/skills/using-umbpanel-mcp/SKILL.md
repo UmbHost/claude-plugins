@@ -89,7 +89,7 @@ server actually offers.
 | Services and platform | `services_list_my_services`, `platform_status` (active incidents and maintenance), `server_info` |
 | Docker services | `docker_list_services`, `docker_get_service` (status, image, replicas, healthcheck, deploy delay), `docker_get_service_information` (region, preview URLs, image tag/registry, mounts, disk usage vs quota), `docker_get_deploy_webhook`, `docker_get_environment_variables`, `docker_set_environment_variable`, `docker_remove_environment_variable`*, `docker_start_service`, `docker_stop_service`*, `docker_deploy_latest_image`*, `docker_initialize_stack`*, `docker_set_healthcheck`, `docker_set_deployment_delay`, `docker_clear_media_cache`, `docker_clear_temp_cache`* |
 | Containers | `docker_list_containers`, `docker_get_container_stats`, `docker_get_container_logs`, `docker_container_action` (start/restart/stop/kill; all but start are gated), `docker_exec_command`*, `docker_read_container_file` |
-| Registries | `docker_list_registries`, `docker_get_registry`, `docker_create_registry`, `docker_update_registry_credentials`, `docker_delete_registry`*, `docker_use_registry_for_service` |
+| Registries | `docker_list_registries`, `docker_get_registry`, `docker_test_registry` (checks credentials without saving), `docker_create_registry`, `docker_update_registry_credentials`, `docker_delete_registry`*, `docker_use_registry_for_service` |
 | Cloudflare DNS | `cloudflare_dns_list_records`, `cloudflare_dns_get_record`, `cloudflare_dns_create_record`, `cloudflare_dns_update_record`, `cloudflare_dns_set_proxy`, `cloudflare_dns_delete_record`* |
 | Cloudflare zone | `cloudflare_list_all_hostnames`, `cloudflare_zone_get_settings`, `cloudflare_zone_set_setting`, `cloudflare_bot_get`, `cloudflare_bot_update`, `cloudflare_cdn_purge`, `cloudflare_analytics_get` |
 | Custom hostnames | `cloudflare_hostnames_list`, `cloudflare_hostname_get` (the DNS and validation records to add), `cloudflare_hostname_limits`, `cloudflare_hostname_zones`, `cloudflare_hostname_create`, `cloudflare_hostname_validate`, `cloudflare_hostname_delete`* |
@@ -109,9 +109,17 @@ server actually offers.
 **Wire up and deploy a GreenStack site**
 1. **Find the environment.** Use `services_list_my_services`, then `docker_list_services`, and pick the
    `dockerServiceKey`.
-2. **Registry.** Create a registry credential with `docker_create_registry` (a read-scoped token for
-   any Portainer-supported registry), then point the service at it with
-   `docker_use_registry_for_service`.
+2. **Registry.** Check the credentials with `docker_test_registry` (a read-scoped token for any
+   Portainer-supported registry), then save them with `docker_create_registry` and point the service
+   at it with `docker_use_registry_for_service`.
+   - **Saves are verified.** Create and credential updates test the login first and save nothing if it
+     fails. The result's `outcome` says why: `CredentialsRejected`, `RegistryUnreachable`,
+     `HostNotAllowed` (registries must be on the public internet), `RateLimited` (about 20 checks per
+     10 minutes), or `DuplicateCredentials` (the member already has a registry with this URL and
+     username; use or update that one). Relay it; don't retry blindly.
+   - AWS ECR keys can't be tested in advance. The test says so, and the save goes ahead.
+   - To test a saved registry, pass its `registryKey` to `docker_test_registry`. Any credential you
+     leave out falls back to the saved one.
 3. **Provision or deploy.**
    - A new environment: `docker_initialize_stack` with the **bare image name only**
      (e.g. `acme/site`, no registry host; GreenStack pulls `latest`). Poll `docker_get_service` for
