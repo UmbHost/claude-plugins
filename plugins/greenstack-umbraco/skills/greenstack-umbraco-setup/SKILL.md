@@ -1,6 +1,6 @@
 ---
 name: greenstack-umbraco-setup
-description: Use when configuring, deploying, or troubleshooting an Umbraco 13 or 17 site on UmbHost GreenStack (Docker Swarm + Traefik + Cloudflare, managed in UmbPanel) — single-instance or load-balanced/multi-replica, any Git provider or Docker registry. Symptoms include "HTTPS is required" in the backoffice, a container pulled from rotation / failing health checks on *.umbpanel.io, antiforgery or backoffice-login loops across replicas, images 404ing on some replicas, or a first deploy that never triggers (WEBHOOK_ENDPOINT).
+description: Use when configuring, deploying, or troubleshooting an Umbraco 13 or 17 site on UmbHost GreenStack (Docker Swarm + Traefik + Cloudflare, managed in UmbPanel) — single-instance or load-balanced/multi-replica, any Git provider or Docker registry. Symptoms include "HTTPS is required" in the backoffice, a container pulled from rotation / failing health checks on *.umbpanel.io, antiforgery or backoffice-login loops across replicas, images 404ing on some replicas, new pages 404ing after a restart or deploy until republished, or a first deploy that never triggers (WEBHOOK_ENDPOINT).
 ---
 
 # GreenStack Umbraco setup
@@ -79,8 +79,12 @@ With the Razor flags removed, views compile **at build**, so problems surface as
 
 Topology is the service's **replica count in UmbPanel** (`docker_get_service`): single = 1, load-balanced = >1.
 
-- **Leave server-role election automatic** for multi-replica. Set `Umbraco:CMS:Global:DisableElectionForSingleServer=true` **only** for single-instance.
-- **v17 + ≥2 replicas:** configure a **SignalR backplane**, or the backoffice throws "No connection with that ID". Use Umbraco's **"using existing infrastructure"** approach — the **existing SQL database** as the backplane via `IntelliTect.AspNetCore.SignalR.SqlServer` + a composer calling `AddSignalR().AddSqlServer(builder.Config.GetUmbracoConnectionString())` (reuses the injected DSN; no appsettings). Full code + the Azure SQL caveat: `references/umbraco-17.md`. Not needed for a single replica, nor for any v13.
+- **Single-instance:** set `Umbraco:CMS:Global:DisableElectionForSingleServer=true`. **v13 multi-replica:** leave server-role election automatic.
+- **v17 + ≥2 replicas** — the backoffice runs on every replica, so follow Umbraco's backoffice load-balancing guide in full (code for all four: `references/umbraco-17.md`). Not needed for a single replica, nor for any v13.
+  - **SignalR backplane**, or the backoffice throws "No connection with that ID". Use the **existing SQL database** via `IntelliTect.AspNetCore.SignalR.SqlServer` + a composer calling `AddSignalR().AddSqlServer(builder.Config.GetUmbracoConnectionString())` (reuses the injected DSN; no appsettings).
+  - **Every replica a `SchedulingPublisher`** (`SetServerRegistrar(new StaticServerAccessor())`), **not** automatic election. An elected Subscriber never writes `umbracoDocumentUrl`, so pages published from its backoffice **404 after the next restart/deploy until republished**.
+  - **`builder.LoadBalanceIsolatedCaches()`**, so backoffice repository caches don't go stale across replicas.
+  - **`Hosting:TemporaryFileUploadLocation` = `/app/umbraco/Data/TemporaryFileUploads`**: the default sits under `umbraco/Data/TEMP`, which is node-local.
 - **Sticky sessions are already on** at Traefik — don't add them.
 - **Examine stays per-replica** (platform injects `TempFileSystemDirectoryFactory`) — never put the Lucene index on a shared volume; it corrupts under concurrent locks.
 
@@ -157,7 +161,8 @@ The CDN **hard-caches all static files and media — including image crops** —
 | Full image ref + immutable `sha` tag in UmbPanel | Enter the bare image name; GreenStack pulls `latest` via the webhook |
 | "Run as root" to fix volume writes | Template runs non-root `1000` — keep it |
 | Baking `ASPNETCORE_ENVIRONMENT` / secrets into the image | Injected by UmbPanel per environment |
-| Setting `DisableElectionForSingleServer` on a multi-replica site | Only for single-instance; leave election automatic when load-balanced |
+| Setting `DisableElectionForSingleServer` on a multi-replica site | Only for single-instance |
+| Leaving server-role election automatic on a v17 multi-replica site | One replica becomes a Subscriber, which never persists URLs: new pages 404 after a restart/deploy until republished. Register `StaticServerAccessor` (always `SchedulingPublisher`) + `LoadBalanceIsolatedCaches()` (umbraco/Umbraco-CMS#23569) |
 | Re-adding `<RazorCompileOnBuild/Publish>false` under Production mode | Views then aren't precompiled — every template 404s. Only valid alongside `ModelsMode=InMemoryAuto` (non-Production) |
 | `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind and models aren't disabled |
 | v13 Production mode with no fixed cache buster | v13's `RuntimeMinificationValidator` fails boot — set `RuntimeMinification:CacheBuster=Version` (not `Timestamp`) |
