@@ -17,6 +17,7 @@ customer-facing summary.)
 | `ConnectionStrings__umbracoDbDSN` (+ `_ProviderName`) | the provisioned DB DSN | Injected as a **secret**; never bake a connection string into the image |
 | `ASPNETCORE_ENVIRONMENT` | the environment type (Production/Staging/…) | Injected per environment; don't bake it into the Dockerfile |
 | `DOTNET_GC*` / `DOTNET_*` | GC + diagnostics tuning | Memory tuning for the container |
+| `GreenStack__Replicas` | the service's replica count | Read by the GreenStack NuGet package to choose single-instance or load-balanced settings; UmbPanel updates it on scale. Only added when UmbPanel re-renders the stack (env var edit, scale, deployment delay or healthcheck save), not on a normal deploy; not settable by hand |
 
 ## Mounts and runtime (provided by the platform)
 

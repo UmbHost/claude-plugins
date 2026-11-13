@@ -1,6 +1,6 @@
 ---
 name: greenstack-umbraco-setup
-description: Use when configuring, deploying, or troubleshooting an Umbraco 13 or 17 site on UmbHost GreenStack (Docker Swarm + Traefik + Cloudflare, managed in UmbPanel) — single-instance or load-balanced/multi-replica, any Git provider or Docker registry. Symptoms include "HTTPS is required" in the backoffice, a container pulled from rotation / failing health checks on *.umbpanel.io, antiforgery or backoffice-login loops across replicas, images 404ing on some replicas, new pages 404ing after a restart or deploy until republished, or a first deploy that never triggers (WEBHOOK_ENDPOINT).
+description: Use when configuring, deploying, or troubleshooting an Umbraco 13 or 17 site on UmbHost GreenStack (Docker Swarm + Traefik + Cloudflare, managed in UmbPanel) — single-instance or load-balanced/multi-replica, any Git provider or Docker registry, including installing or troubleshooting the UmbHost.GreenStack.Umbraco.Configuration NuGet package. Symptoms include "HTTPS is required" in the backoffice, a container pulled from rotation / failing health checks on *.umbpanel.io, antiforgery or backoffice-login loops across replicas, images 404ing on some replicas, new pages 404ing after a restart or deploy until republished, or a first deploy that never triggers (WEBHOOK_ENDPOINT).
 ---
 
 # GreenStack Umbraco setup
@@ -9,7 +9,7 @@ description: Use when configuring, deploying, or troubleshooting an Umbraco 13 o
 
 GreenStack runs a customer's own Umbraco Docker image on Docker Swarm behind Traefik + Cloudflare, managed in UmbPanel. **The platform already injects the load-balancing, routing, MainDom, Examine and storage configuration and mounts shared volumes for you.** Most "GreenStack problems" are an app re-implementing, overriding, or inventing something the platform already provides, and fighting it.
 
-**Golden rule:** start from the official template for the Umbraco version, keep the platform-managed settings untouched, and let UmbPanel inject the rest. Configure only the gaps below.
+**Golden rule:** start from the official template for the Umbraco version, keep the platform-managed settings untouched, and let UmbPanel inject the rest. Prefer the GreenStack NuGet package for the app-side setup, and configure only the gaps below.
 
 ## Official templates — start here, don't hand-roll
 
@@ -37,7 +37,23 @@ The platform also **mounts shared storage** — media, `umbraco/Logs`, `umbraco/
 
 Full contract + UmbPanel source references: `references/greenstack-contract.md`.
 
-## What you DO configure (the template already contains these)
+## The GreenStack NuGet package — prefer it
+
+`UmbHost.GreenStack.Umbraco.Configuration` (nuget.org; source in UmbPanel) does most of the app-side setup for you. Install it and redeploy; there's nothing to call from `Program.cs`. One package serves v13 (`net8.0`) and v17 (`net10.0`).
+
+```bash
+dotnet add package UmbHost.GreenStack.Umbraco.Configuration
+```
+
+- **Switches itself on in a container** (`DOTNET_RUNNING_IN_CONTAINER=true`), off when run from an IDE. Force it either way with `GreenStack__Enabled=true|false`.
+- **Replaces items 1–4 below** (forwarded headers, the HTTPS health checks, the HTTPS validator, Data Protection keys to `/app/keys`), plus the Razor and Umbraco Forms publish settings and single-instance election.
+- **v17 with ≥2 replicas: replaces the whole load-balancing section** (SignalR backplane, every replica a `SchedulingPublisher`, `LoadBalanceIsolatedCaches()`, shared temp uploads). This needs **package 1.1.0 or later**; 1.0.0 has none of it.
+- **It reads the replica count from `GreenStack__Replicas`**, which UmbPanel injects. If that variable is **absent**, the package applies neither the single-instance nor the load-balanced settings. The startup audit does **not** warn when it's missing. UmbPanel only adds it when it re-renders the stack; a normal deploy (webhook or "deploy latest image") does **not**. So check the service's environment (`docker_get_service`) before relying on it. If it's missing, any change that re-renders the stack adds it: editing an environment variable, or re-saving the deployment delay or healthcheck at its current value (`docker_set_deployment_delay` / `docker_set_healthcheck`). This restarts the replicas. Customers can't set it by hand (it's platform-managed). A service that isn't on a stack (the legacy path) never gets it until support migrates it, so raise a ticket (`tickets_create`).
+- **Don't configure both.** On an existing site, remove your own versions of what it does: forwarded headers, the HTTPS check settings, `DockerChecksRemoverComposer`, `DataProtectionComposer`, and on v17 the SignalR and load-balancing composers and `TemporaryFileUploadLocation`. Most duplicates are just redundant. **`DataProtectionComposer` is a must-remove:** the package uses `/app/keys` in every non-Development environment, while a hand-written composer may check something narrower (`IsProduction()`, or `IsProduction() || IsStaging()`). Both set the key repository, and composer order isn't defined, so in an environment the composer doesn't cover the keys can end up node-local, breaking logins across replicas and deploys. Anything the package marks "unless you set it" yields to your own config.
+- **Still yours:** the Dockerfile (item 5), Production runtime mode (item 6), publishing `App_Plugins`, versioned asset URLs, `*.umbpanel.io`-safe redirects, and path casing.
+- It **logs startup warnings** when the site isn't in Production mode, when appsettings sets something GreenStack injects, or when a load-balanced v17 replica isn't a `SchedulingPublisher`. It also raises build warning `GREENSTACK001` if view precompilation is off.
+
+## What you DO configure (without the package; the template already contains these)
 
 Both versions:
 
@@ -78,6 +94,8 @@ With the Razor flags removed, views compile **at build**, so problems surface as
 ## Load-balanced vs single-instance
 
 Topology is the service's **replica count in UmbPanel** (`docker_get_service`): single = 1, load-balanced = >1.
+
+**With the GreenStack package 1.1.0+ and `GreenStack__Replicas` on the service, all of the election and v17 load-balancing setup below is automatic.** Do it by hand only without the package.
 
 - **Single-instance:** set `Umbraco:CMS:Global:DisableElectionForSingleServer=true`. **v13 multi-replica:** leave server-role election automatic.
 - **v17 + ≥2 replicas** — the backoffice runs on every replica, so follow Umbraco's backoffice load-balancing guide in full (code for all four: `references/umbraco-17.md`). Not needed for a single replica, nor for any v13.
@@ -162,6 +180,8 @@ The CDN **hard-caches all static files and media — including image crops** —
 | "Run as root" to fix volume writes | Template runs non-root `1000` — keep it |
 | Baking `ASPNETCORE_ENVIRONMENT` / secrets into the image | Injected by UmbPanel per environment |
 | Setting `DisableElectionForSingleServer` on a multi-replica site | Only for single-instance |
+| Installing the GreenStack package and keeping the hand-written composers/settings | The same thing gets configured twice. Remove your forwarded headers, HTTPS check settings, `DockerChecksRemoverComposer`, `DataProtectionComposer` (a must: two key repositories with different conditions can leave keys node-local), and on v17 the SignalR and load-balancing composers |
+| Relying on the package for load balancing with `GreenStack__Replicas` missing | Without it the package silently skips the single-instance and load-balanced settings. A normal deploy doesn't add it; edit an env var or re-save the deployment delay/healthcheck to re-render the stack (restarts replicas). Not on a stack → support ticket |
 | Leaving server-role election automatic on a v17 multi-replica site | One replica becomes a Subscriber, which never persists URLs: new pages 404 after a restart/deploy until republished. Register `StaticServerAccessor` (always `SchedulingPublisher`) + `LoadBalanceIsolatedCaches()` (umbraco/Umbraco-CMS#23569) |
 | Re-adding `<RazorCompileOnBuild/Publish>false` under Production mode | Views then aren't precompiled — every template 404s. Only valid alongside `ModelsMode=InMemoryAuto` (non-Production) |
 | `ModelsMode: "None"` | The value is **`Nothing`**; `None` fails to bind and models aren't disabled |
