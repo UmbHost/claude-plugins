@@ -3,6 +3,8 @@
 Template repo: `github.com/UmbHost/GreenStack.Umbraco` (default branch `main`). Start from it, or
 apply these to an existing Umbraco 17 project.
 
+> **Prefer the GreenStack NuGet package** (`UmbHost.GreenStack.Umbraco.Configuration`, see SKILL.md). It does the forwarded headers, HTTPS check and validator, Data Protection, and Razor/Forms publish settings below, and on v17 with ≥2 replicas (package 1.1.0+) the whole load-balancing section. Use the hand-written code here only without the package, and never both.
+
 ## Version-specific values
 
 - Target framework **`net10.0`**, `Umbraco.Cms` 17.x. Dockerfile base images
@@ -34,6 +36,8 @@ On GreenStack the backoffice runs on **every** replica, so a v17 load-balanced s
 parts of Umbraco's [load-balancing the backoffice](https://docs.umbraco.com/umbraco-cms/run-in-production/infrastructure-and-ops/server-setup/load-balancing/load-balancing-backoffice)
 guide: the SignalR backplane, every replica as `SchedulingPublisher`, isolated-cache versioning, and
 temp uploads on shared storage. None of them are needed for a single replica, nor for any v13.
+
+**GreenStack package 1.1.0+ does all four automatically** when `GreenStack__Replicas` ≥ 2, so skip this section if the site uses it.
 
 ### SignalR backplane
 

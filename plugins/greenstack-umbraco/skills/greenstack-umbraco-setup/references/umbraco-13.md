@@ -3,6 +3,8 @@
 Template repo: `github.com/UmbHost/GreenStack.Umbraco-v13` (default branch `main`). Start from it, or
 apply these to an existing Umbraco 13 project.
 
+> **Prefer the GreenStack NuGet package** (`UmbHost.GreenStack.Umbraco.Configuration`, see SKILL.md). It does the forwarded headers, HTTPS check and validator, Data Protection, and Razor/Forms publish settings below. Use the hand-written code here only without the package, and never both.
+
 ## Version-specific values
 
 - Target framework **`net8.0`**, `Umbraco.Cms` 13.x (LTS). Dockerfile base images
