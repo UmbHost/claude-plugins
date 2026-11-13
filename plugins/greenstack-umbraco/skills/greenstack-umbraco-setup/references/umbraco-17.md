@@ -28,7 +28,14 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 app.UseForwardedHeaders();   // first
 ```
 
-## Load balancing (≥2 replicas) — SignalR backplane
+## Load balancing (≥2 replicas)
+
+On GreenStack the backoffice runs on **every** replica, so a v17 load-balanced site needs all four
+parts of Umbraco's [load-balancing the backoffice](https://docs.umbraco.com/umbraco-cms/run-in-production/infrastructure-and-ops/server-setup/load-balancing/load-balancing-backoffice)
+guide: the SignalR backplane, every replica as `SchedulingPublisher`, isolated-cache versioning, and
+temp uploads on shared storage. None of them are needed for a single replica, nor for any v13.
+
+### SignalR backplane
 
 v17 can load-balance the backoffice, which uses SignalR (WebSockets) for live updates. With **2+
 replicas** and no backplane the backoffice throws **"No connection with that ID"** errors as
@@ -68,9 +75,63 @@ enabled**, so SQL-backplane message throughput is lower than on self-hosted SQL.
 it is still the recommended approach; only reach for Redis/Azure SignalR if throughput proves
 insufficient.
 
-Apply the backplane **only when the service runs ≥2 replicas**; a single replica needs none. Leave
-server-role election automatic for multi-replica; set
-`Umbraco:CMS:Global:DisableElectionForSingleServer = true` only for single-instance.
+Apply the backplane **only when the service runs ≥2 replicas**; a single replica needs none.
+
+### Every replica is a SchedulingPublisher, with isolated caches load-balanced
+
+**Do not leave server-role election automatic on v17.** Election makes one replica a `Subscriber`,
+and since Umbraco 17.4 a Subscriber **never writes `umbracoDocumentUrl`**: the replica that receives
+the cache instruction only updates its memory too. A page published from the Subscriber's backoffice
+routes until the next restart or deploy, then **404s until it is republished**. Rebuilding the
+database cache, the memory cache or Examine doesn't help. Umbraco treats this as by design
+(umbraco/Umbraco-CMS#23569): a load-balanced backoffice must make every server a SchedulingPublisher.
+
+```csharp
+using Umbraco.Cms.Core.Composing;
+using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Core.Sync;
+using Umbraco.Cms.Infrastructure.DependencyInjection;
+
+namespace GreenStack.Umbraco.Composers;
+
+public class LoadBalancedBackOfficeComposer : IComposer
+{
+    public void Compose(IUmbracoBuilder builder)
+    {
+        builder.SetServerRegistrar(new StaticServerAccessor());
+        builder.LoadBalanceIsolatedCaches();
+    }
+}
+
+public class StaticServerAccessor : IServerRoleAccessor
+{
+    public ServerRole CurrentServerRole => ServerRole.SchedulingPublisher;
+}
+```
+
+`LoadBalanceIsolatedCaches()` versions the backoffice repository caches across replicas, so one
+replica doesn't serve another's stale edits. Making every replica a SchedulingPublisher is safe: in
+v17, scheduled publishing, webhooks and the cleanup jobs are `IDistributedBackgroundJob`s, which take
+a database lock and run once across replicas. A custom recurring job that must run once has to
+implement `IDistributedBackgroundJob` too.
+
+**Repairing an existing site:** pages published before the fix have no URL rows. After deploying,
+run `DELETE FROM umbracoKeyValue WHERE [key] = 'UmbracoUrlGeneration';` and restart. A
+SchedulingPublisher then rebuilds every URL row on boot.
+
+### Temp uploads on shared storage
+
+Backoffice uploads land in `umbraco/Data/TEMP/TemporaryFile` by default, and GreenStack mounts
+`umbraco/Data/TEMP` **node-local**. Point them at the shared `umbraco/Data` mount, in
+`appsettings.Production.json` (and Staging, if load-balanced):
+
+```json
+"Umbraco": { "CMS": { "Hosting": {
+  "TemporaryFileUploadLocation": "/app/umbraco/Data/TemporaryFileUploads"
+} } }
+```
+
+Umbraco creates the folder on first upload.
 
 ## appsettings.json (template, Production)
 

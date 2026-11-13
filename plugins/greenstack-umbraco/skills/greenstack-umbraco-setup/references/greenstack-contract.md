@@ -22,7 +22,7 @@ customer-facing summary.)
 
 - **Shared, clustered (across replicas):** `wwwroot/media`, `umbraco/Logs`, `umbraco/Data`, and
   **`/app/keys`** (Data Protection keys).
-- **Node-local (fast, per-node):** the Media cache and `umbraco/Data/TEMP` (Examine/NuCache temp).
+- **Node-local (fast, per-node):** the Media cache and `umbraco/Data/TEMP` (Examine/NuCache temp). A load-balanced v17 site moves backoffice temp uploads off it (`references/umbraco-17.md`).
 - **Sticky sessions** on Traefik are always on (`sticky_session` cookie).
 - A Traefik **health check** is added when `replicas > 1` — path `/`, hit over `*.umbpanel.io`.
 - **Non-root runtime:** `user 1000:1000`, `cap_drop: ALL`, container port **8080**.
