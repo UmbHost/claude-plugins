@@ -50,6 +50,7 @@ dotnet add package UmbHost.GreenStack.Umbraco.Configuration
 - **v17 with ≥2 replicas: replaces the whole load-balancing section** (SignalR backplane, every replica a `SchedulingPublisher`, `LoadBalanceIsolatedCaches()`, shared temp uploads). This needs **package 1.1.0 or later**; 1.0.0 has none of it.
 - **It reads the replica count from `GreenStack__Replicas`**, which UmbPanel injects. If that variable is **absent**, the package applies neither the single-instance nor the load-balanced settings. The startup audit does **not** warn when it's missing. UmbPanel only adds it when it re-renders the stack; a normal deploy (webhook or "deploy latest image") does **not**. So check the service's environment (`docker_get_service`) before relying on it. If it's missing, any change that re-renders the stack adds it: editing an environment variable, or re-saving the deployment delay or healthcheck at its current value (`docker_set_deployment_delay` / `docker_set_healthcheck`). This restarts the replicas. Customers can't set it by hand (it's platform-managed). A service that isn't on a stack (the legacy path) never gets it until support migrates it, so raise a ticket (`tickets_create`).
 - **Don't configure both.** On an existing site, remove your own versions of what it does: forwarded headers, the HTTPS check settings, `DockerChecksRemoverComposer`, `DataProtectionComposer`, and on v17 the SignalR and load-balancing composers and `TemporaryFileUploadLocation`. Most duplicates are just redundant. **`DataProtectionComposer` is a must-remove:** the package uses `/app/keys` in every non-Development environment, while a hand-written composer may check something narrower (`IsProduction()`, or `IsProduction() || IsStaging()`). Both set the key repository, and composer order isn't defined, so in an environment the composer doesn't cover the keys can end up node-local, breaking logins across replicas and deploys. Anything the package marks "unless you set it" yields to your own config.
+- **Serves `/health`** (package **1.2.0+**) with ASP.NET Core's native health checks, for GreenStack's container and load-balancer probes. Pointing the service's healthcheck path at it in UmbPanel is still a step to do. See *Health check endpoint*.
 - **Still yours:** the Dockerfile (item 5), Production runtime mode (item 6), publishing `App_Plugins`, versioned asset URLs, `*.umbpanel.io`-safe redirects, and path casing.
 - It **logs startup warnings** when the site isn't in Production mode, when appsettings sets something GreenStack injects, or when a load-balanced v17 replica isn't a `SchedulingPublisher`. It also raises build warning `GREENSTACK001` if view precompilation is off.
 
@@ -106,13 +107,34 @@ Topology is the service's **replica count in UmbPanel** (`docker_get_service`): 
 - **Sticky sessions are already on** at Traefik — don't add them.
 - **Examine stays per-replica** (platform injects `TempFileSystemDirectoryFactory`) — never put the Lucene index on a shared volume; it corrupts under concurrent locks.
 
-## Don't break the health check (load-bearing)
+## Health check endpoint — `/health` (load-bearing)
 
-Traefik health-checks each container **over `*.umbpanel.io` at path `/`**. A redirect, block, or challenge on that traffic fails the check and **the container is pulled from rotation**. So:
+GreenStack runs two checks against each replica:
 
+- **Container check (always on):** Docker requests **`GET /health` on port 8080** every 30s (3-minute start period).
+- **Load-balancer check (≥2 replicas):** Traefik requests the service's **healthcheck path** on each replica every 10s (5s timeout) and pulls any replica that fails **out of rotation**. The path is set per service in UmbPanel (**Healthcheck** quick action, or `docker_set_healthcheck`). When unset it defaults to **`/`**, the home page. Single-replica services get no load-balancer check, and the setting is unavailable to them.
+
+**Set this up as part of every GreenStack setup; don't wait to be asked:**
+
+1. **Endpoint.** The **GreenStack NuGet package 1.2.0+ serves `/health` automatically**, using ASP.NET Core's native health checks ahead of Umbraco's middleware, so no code is needed. Upgrade an older package version. **Without the package**, add the native health check yourself:
+
+   ```csharp
+   builder.Services.AddHealthChecks();   // before builder.Build()
+   // ...
+   app.MapHealthChecks("/health");      // after the app.UseUmbraco()...WithEndpoints(...) block
+   ```
+
+2. **Deploy, then verify** `https://{service}.umbpanel.io/health` returns `200 Healthy`.
+3. **Point the load balancer at it.** On a service with ≥2 replicas (`docker_get_service`), call `docker_set_healthcheck` with path `/health`. It's confirm-gated, so show the preview first. It restarts the replicas. Without the MCP, the portal step is: service → **Healthcheck** → `/health` → **Save Changes**. Skip this on a single replica, where the setting doesn't exist.
+
+**Order matters:** set the path **only after** step 2 passes. A path that 404s fails every replica at once and takes the site offline. To recover, call `docker_set_healthcheck` with `disable: true` or path `/`. KB: `https://kb.umbhost.net/greenstack/how-do-i-add-a-health-check-endpoint-to-my-greenstack-site/`.
+
+Keep the health endpoint, and `/` while it's the default, reachable:
+
+- **Anonymous and un-redirected.** A redirect, auth challenge or block fails the check.
+- **Cheap.** Don't register checks against external or slow dependencies. One shared failure would mark every replica unhealthy at once.
 - If you add a **www↔non-www redirect, exclude `*.umbpanel.io`** (and the preview host).
 - Do **not** `UseHttpsRedirection()` in the container — TLS terminates at the edge.
-- There is **no custom `/healthz`** — the probe is path `/`. Keep it reachable, anonymous, and un-redirected.
 
 ## UmbPanel + CI orchestration
 
@@ -121,7 +143,7 @@ Delegate UmbPanel steps to the MCP; when it is unavailable, do them by hand in t
 - **Registry:** add a registry credential (any Portainer-supported registry) with a read-scoped token (e.g. a GHCR PAT with `read:packages`).
 - **Image name:** enter the **bare image name only** — no registry host, username, or org. GreenStack pulls the `latest` tag automatically.
 - **Webhook chicken-and-egg:** the deploy `WEBHOOK_ENDPOINT` does not exist until **after** the first deploy, so the **first push is expected to fail at the webhook step**. Sequence: push → image builds/pushes → webhook step fails → read the webhook URL from UmbPanel (`docker_get_deploy_webhook` returns it) → store it as a CI secret → re-run.
-- **Verify:** GET `https://{service}.umbpanel.io` until it responds healthy.
+- **Verify:** GET `https://{service}.umbpanel.io/health` until it returns `Healthy`, then check the home page renders.
 
 ## UmbHost Knowledgebase — look it up, don't guess
 
@@ -173,7 +195,9 @@ The CDN **hard-caches all static files and media — including image crops** —
 | Hand-setting `MainDomLock` / `UmbracoApplicationUrl` / Examine factory | Platform injects them (frozen) — remove from appsettings |
 | Inventing `/shared/dp-keys` or Azure Blob for media | DP keys → `/app/keys`; media is an injected shared mount |
 | DP keys gated on `IsProduction()` only | Staging (`ASPNETCORE_ENVIRONMENT=Staging`) then keys outside `/app/keys` → regenerate per restart/replica, breaking staging logins. Gate on production **and** staging (`IsProduction() || IsStaging()`) |
-| Adding a custom `/healthz` endpoint | Health check is path `/` over `*.umbpanel.io` |
+| Leaving the load balancer on its default `/` (the home page) | The package (1.2.0+) serves `/health`. Without the package, add native `AddHealthChecks()` + `MapHealthChecks("/health")`. Deploy, then set the healthcheck path to `/health` (`docker_set_healthcheck`) |
+| Inventing a custom `/healthz` controller, or a different path | Use the native ASP.NET Core health checks at **`/health`**, which the container check already probes |
+| Setting the healthcheck path before the endpoint is deployed | Every replica fails the check and the site goes offline. Deploy first, confirm `/health` returns `Healthy`, then set the path |
 | Forgetting the HTTPS check-disable + validator removal | Backoffice shows "HTTPS is required" |
 | Missing the deploy webhook / first-push-fails flow | No deploy triggers; the webhook URL exists only after the first deploy |
 | Full image ref + immutable `sha` tag in UmbPanel | Enter the bare image name; GreenStack pulls `latest` via the webhook |

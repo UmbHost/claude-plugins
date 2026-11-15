@@ -25,7 +25,8 @@ customer-facing summary.)
   **`/app/keys`** (Data Protection keys).
 - **Node-local (fast, per-node):** the Media cache and `umbraco/Data/TEMP` (Examine/NuCache temp). A load-balanced v17 site moves backoffice temp uploads off it (`references/umbraco-17.md`).
 - **Sticky sessions** on Traefik are always on (`sticky_session` cookie).
-- A Traefik **health check** is added when `replicas > 1` — path `/`, hit over `*.umbpanel.io`.
+- **Container healthcheck** on every site: `GET /health` on port 8080, every 30s, 10s timeout, 3 retries, 3m start period.
+- A Traefik **load-balancer health check** is added when `replicas > 1`: the service's healthcheck path (set in UmbPanel / `docker_set_healthcheck`), default `/`, every 10s with a 5s timeout. A failing replica is pulled from rotation. Point it at `/health`, which the GreenStack NuGet package (1.2.0+) serves with ASP.NET Core's native health checks, or a hand-added `MapHealthChecks("/health")` without the package.
 - **Non-root runtime:** `user 1000:1000`, `cap_drop: ALL`, container port **8080**.
 - Placement/scaling (region, scale, replicas, rollback) are platform-managed.
 

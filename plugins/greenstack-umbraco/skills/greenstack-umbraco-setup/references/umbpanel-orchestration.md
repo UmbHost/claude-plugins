@@ -18,6 +18,7 @@ The tool names below are the ones the UmbPanel MCP serves:
 | Registry config (name/username/token/org) | `docker_list_registries` / `docker_get_registry` / `docker_create_registry` / `docker_update_registry_credentials` / `docker_delete_registry`, and `docker_use_registry_for_service` to point the environment at one |
 | First deploy of a new environment with the **bare image name** | `docker_initialize_stack` |
 | Deploy the latest image | `docker_deploy_latest_image` |
+| Point the load-balancer healthcheck at `/health` (≥2 replicas, after `/health` returns `Healthy`) | `docker_set_healthcheck` |
 | Container status, logs and stats | `docker_list_containers` / `docker_get_container_logs` / `docker_get_container_stats` |
 | Is the platform itself having an incident? | `platform_status` |
 
@@ -61,8 +62,10 @@ GitHub/GHCR. Pick the matching CI sample from `github.com/UmbHost/GreenStack.CIC
    portal's deploy section). Treat it as secret-ish (the endpoint accepts an unauthenticated POST).
 4. Store it as a CI secret/variable in the provider (e.g. `gh secret set WEBHOOK_ENDPOINT`, or an
    Azure DevOps pipeline secret) → re-run the pipeline. Now the deploy triggers.
-5. **Verify:** GET the preview URL (`https://{service}.umbpanel.io`; `docker_get_service_information`
-   gives the exact one) until it responds healthy. On failure, check `platform_status` for a platform
+5. **Verify:** GET `/health` on the preview URL (`https://{service}.umbpanel.io/health`;
+   `docker_get_service_information` gives the exact host) until it returns `Healthy`, then check the
+   home page renders. On a service with ≥2 replicas, then set the healthcheck path to `/health`
+   (`docker_set_healthcheck`, confirm-gated). On failure, check `platform_status` for a platform
    incident, read `docker_get_container_logs`, then consult the health-check / "HTTPS is required" /
    casing / `App_Plugins` troubleshooting in the KB.
 
